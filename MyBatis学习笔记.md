@@ -29,6 +29,7 @@
 **junit 依赖**
 
 ```xml
+<!--junit依赖-->
 <!-- https://mvnrepository.com/artifact/junit/junit -->
 <dependency>
     <groupId>junit</groupId>
@@ -41,12 +42,50 @@
 **logback 依赖**
 
 ```xml
+<!--logback依赖-->
 <!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
 <dependency>
     <groupId>ch.qos.logback</groupId>
     <artifactId>logback-classic</artifactId>
     <version>1.2.11</version>
     <scope>test</scope>
+</dependency>
+```
+
+**dom4j** 
+
+```xml
+<!--dom4j依赖-->
+<!-- https://mvnrepository.com/artifact/org.dom4j/dom4j -->
+<dependency>
+    <groupId>org.dom4j</groupId>
+    <artifactId>dom4j</artifactId>
+    <version>2.1.3</version>
+</dependency>
+```
+
+**jaxen**
+
+```xml
+<!--jaxen依赖-->
+<!-- https://mvnrepository.com/artifact/jaxen/jaxen -->
+<dependency>
+    <groupId>jaxen</groupId>
+    <artifactId>jaxen</artifactId>
+    <version>1.2.0</version>
+</dependency>
+```
+
+**servlet**
+
+```xml
+<!--servlet依赖-->
+<!-- https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api -->
+<dependency>
+    <groupId>javax.servlet</groupId>
+    <artifactId>javax.servlet-api</artifactId>
+    <version>4.0.1</version>
+    <scope>provided</scope>
 </dependency>
 ```
 
@@ -715,6 +754,8 @@ public void updateCar(Car car) {
 
 使用到了 `sqlSession.selectOne(sql id, 属性对象) --> Object`。
 
+将从数据库读出的字段数据填入 `Object` 属性中。
+
 ```java
 public Car queryById(Integer id) {
     SqlSession sqlSession = null;
@@ -912,7 +953,7 @@ username=root
 password=991118
 ```
 
-在核心配置文件中引入 properties 文件，并使用 properties 文件中的键值属性。
+在核心配置文件中引入 properties 文件，并使用 properties 文件中的键值属性，使用 `${}` 的方式。
 
 ```xml
 <properties resource="jdbc.properties"></properties>
@@ -929,4 +970,847 @@ password=991118
             <property name="password" value="${password}"/>
         </dataSource>
     </environment>
+```
+
+# 五、手写 Mybatis 框架
+
+## 1、使用 dmo4j 解析 xml 配置文件
+
+所需依赖：
+
+**dom4j**
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.dom4j/dom4j -->
+<dependency>
+    <groupId>org.dom4j</groupId>
+    <artifactId>dom4j</artifactId>
+    <version>2.1.3</version>
+</dependency>
+```
+
+**jaxen**
+
+```xml
+<!-- https://mvnrepository.com/artifact/jaxen/jaxen -->
+<dependency>
+    <groupId>jaxen</groupId>
+    <artifactId>jaxen</artifactId>
+    <version>1.2.0</version>
+</dependency>
+```
+
+# 六、在 Web 中应用 Mybatis
+
+实现银行转账业务。
+
+## 1、编写数据库表
+
+## 2、创建项目
+
+![image-20221111170352079](img/image-20221111170352079.png)
+
+**加入依赖**
+
+**准备前端页面**
+
+![image-20221112090345469](img/image-20221112090345469.png)
+
+**复制核心配置文件**
+
+## 3、代码实现
+
+**业务跑通**
+
+`index.html`：
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>转账页面</title>
+</head>
+<body>
+    <form action="/bank/transfer" method="post">
+        转出账户<input type="text" name="act_no_out"><br>
+        转入账户<input type="text" name="act_no_in"><br>
+        转账金额<input type="text" name="money"><br>
+        <input type="submit" value="提交">
+    </form>
+</body>
+</html>
+```
+
+`AccountServlet.java`：
+
+```java
+// 使用注解标记 servlet 程序坐标
+@WebServlet("/transfer")
+public class AccountServlet extends HttpServlet {
+    private AccountService accountService = new AccountServiceImpl();
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        // 接收页面传来的数据
+        String actOut = req.getParameter("act_no_out");
+        String actIn = req.getParameter("act_no_in");
+        double money = Double.parseDouble(req.getParameter("money"));
+
+        // 调用 Service 中 transfer() 方法完成转账业务
+        try {
+            accountService.transfer(actOut, actIn, money);
+
+            // 跳转至转账成功界面
+            resp.sendRedirect(req.getContextPath() + "/success/transfer_success.html");
+        } catch (BalanceNotEnoughException e) {
+            // 跳转至转账失败界面
+            resp.sendRedirect(req.getContextPath() + "/error/BalanceNotEnough.html");
+        }
+    }
+}
+```
+
+`AccountServiceImpl.java`：
+
+```java
+public class AccountServiceImpl implements AccountService {
+    private ActDao actDao = new ActDaoImpl();
+
+    @Override
+    public void transfer(String actOut, String actIn, Double money) throws BalanceNotEnoughException {
+        // 获取转出账户余额
+        Account accountOut = actDao.queryAccount(actOut);
+        Double balance = accountOut.getBalance();
+
+        // 余额小于转账金额，抛余额不足异常
+        if (balance < money) {
+            throw new BalanceNotEnoughException("余额不足，无法转账！");
+        }
+
+        // 获取装入账户对象
+        Account accountIn = actDao.queryAccount(actIn);
+
+        // 更新内存中账户金额
+        accountOut.setBalance(balance - money);
+        accountIn.setBalance(accountIn.getBalance() + money);
+
+        // 更新数据库账户金额
+        actDao.update(actOut, accountOut.getBalance());
+        actDao.update(actIn, accountIn.getBalance());
+    }
+}
+```
+
+`ActDaoImpl.java`：
+
+```java
+public class ActDaoImpl implements ActDao {
+    @Override
+    public int insertAct(Account account) {
+        // 开启事务
+        SqlSession sqlSession = MybatisUtils.openSession();
+        // 执行sql
+        int effectedRows = sqlSession.insert("insertAct", account);
+        // 事务提交
+        sqlSession.commit();
+
+        return effectedRows;
+    }
+
+    @Override
+    public int update(String actNo, Double balance) {
+        Account account = new Account(null, actNo, balance);
+        // 开启事务
+        SqlSession sqlSession = MybatisUtils.openSession();
+        int count = sqlSession.update("account.updateBalance", account);
+        // 事务提交
+        sqlSession.commit();
+        // 关闭连接
+        sqlSession.close();
+        return count;
+    }
+
+    @Override
+    public Account queryAccount(String actNo) {
+        SqlSession sqlSession = MybatisUtils.openSession();
+        Account account = sqlSession.selectOne("selectOneAccount", actNo);
+        return account;
+    }
+}
+```
+
+**事务控制**
+
+在线程中，执行 DML 语句必须使用同一个数据库连接对象。并在 Service 层进行事务控制。
+
+```java
+// 更新数据库账户金额
+actDao.update(actOut, accountOut.getBalance());
+actDao.update(actIn, accountIn.getBalance());
+```
+
+在 `MybatisUtils.java` 中，控制同一线程获取的数据库连接是同一个：
+
+```java
+public static SqlSession openSession() {
+    // 首先在 threadLocal 对象中获取
+    SqlSession sqlSession = threadLocal.get();
+    if (sqlSession == null) { // 第一次连接数据库
+        // 获取数据库连接并放入 ThreadLocal 对象
+        sqlSession = sqlSessionFactory.openSession();
+        threadLocal.set(sqlSession);
+    }
+    return sqlSession;
+}
+```
+
+关闭连接时，关闭 `sqlSession` 后，还要取消绑定。
+
+> Tomcat 使用线程池，线程后续还会继续使用。
+
+```java
+public static void close(SqlSession sqlSession) {
+    if (sqlSession != null) {
+        // 归还连接
+        sqlSession.close();
+        // 解绑
+        threadLocal.remove();
+    }
+}
+```
+
+由于在 Service 层进行事务控制，Dao 层不能提交事务，关闭事务，只进行数据库操作。
+
+Service 层关键代码：
+
+```java
+// 获取 sqlSession
+SqlSession sqlSession = MybatisUtils.openSession();
+
+try {
+    // 更新数据库账户金额
+    actDao.update(actOut, accountOut.getBalance());
+    actDao.update(actIn, accountIn.getBalance());
+    
+    // 事务提交
+    sqlSession.commit();
+} catch (Exception e) {
+    // 事务回滚
+    sqlSession.rollback();
+    throw new RuntimeException(e);
+} finally {
+    // 释放资源
+    MybatisUtils.close(sqlSession);
+}
+```
+
+在 web 层，对额外的异常进行捕获：
+
+```java
+} catch (Exception e) {
+    // 跳转至未知原因错误界面
+    resp.sendRedirect(req.getContextPath() + "/error/BalanceNotEnough.html");
+}
+```
+
+## 4、Mybatis 三大对象作用域
+
+`SqlSessionFactoryBuilder`：只要创建出了 `SqlSessionFactory`，其作用就结束了，最佳作用域是方法作用域，例如：
+
+```java
+sqlSessionFactory = new SqlSessionFactoryBuilder().build(Resources.getResourceAsStream("mybatis-config.xml"));
+```
+
+`SqlSessionFactory`：在应用运行的阶段，需要不断使用该对象，因此最佳作用域是应用作用域。并且只创建一次。
+
+`SqlSession`：每个线程都应该有自己的实例，以便进行事务管理。
+
+# 七、使用 Javassist 动态生成类
+
+Mybatis 对 Javassist 进行了二次包装。 
+
+# 八、Mybatis 接口代理类的使用
+
+使用条件：
+
+Mapper 文件中，namespace 写接口的全限定名称，id 写抽象方法的方法名。
+
+使用方法：
+
+`sqlSession.getMapper(接口类)`
+
+如果使用 Mybatis，dao 改为 mapper。mapper 包中不需要写实现类。
+
+```java
+public interface CarMapper {
+    /**
+     * 添加汽车
+     * @param car 汽车对象
+     * @return 受影响的记录条数
+     */
+    int insert(Car car);
+
+    /**
+     * 删除汽车
+     * @param id 汽车编号
+     * @return 受影响的记录条数
+     */
+    int deleteById(Integer id);
+
+    /**
+     * 更新汽车信息
+     * @param car 汽车对象
+     * @return 受影响的记录条数
+     */
+    int update(Car car);
+
+    /**
+     * 查询单个汽车信息
+     * @param id 汽车编号
+     * @return 汽车对象
+     */
+    Car queryOneById(Integer id);
+
+    /**
+     * 查询所有汽车信息
+     * @return 汽车列表
+     */
+    List<Car> queryAll();
+}
+```
+
+`xxxMapper.xml` 中，namespace 填入接口的全限定类名，id 填入方法名：
+
+```xml
+<mapper namespace="com.zzy.crud2.mapper.CarMapper">
+    <insert id="insert">
+        insert into t_car
+            (id, car_num, brand, guide_price, produce_time, car_type)
+        values
+            (null, #{carNum}, #{brand}, #{guidePrice}, #{produceTime}, #{carType})
+    </insert>
+```
+
+使用如下语句获取动态代理类：
+
+```java
+private CarMapper carMapper = sqlSession.getMapper(CarMapper.class);
+```
+
+# 九、Mybatis 技巧
+
+## 1、#{} 和 ${}
+
+#{} 底层使用 `PreparedStatement`：先编译 SQL 语句，再传值，可以避免 SQL 注入现象。
+
+${} 底层使用 `Statement`，先拼接 SQL 语句(使用字符串拼接)，再编译 SQL 语句。
+
+优先使用 #{}。
+
+### (1) 拼接 ASC/DESC 进行排序
+
+`CarMapper.java` 中写出抽象方法：
+
+```java
+List<Car> queryAllByPrice(String order);
+```
+
+`carMapper.xml` 中写出相应 SQL 语句：
+
+```xml
+<select id="queryAllByPrice" resultType="com.zzy.crud2.pojo.Car">
+    select id,
+           car_num as carNum,
+           brand,
+           guide_price as guidePrice,
+           produce_time as produceTime,
+           car_type as carType
+    from t_car
+    order by  guidePrice ${order}
+</select>
+```
+
+### (2) 拼接表名
+
+例如：t_log_20221113
+
+### (3) 批量删除记录
+
+`CarMapper.java` 中写出抽象方法：
+
+```java
+int deleteBatchById(String ids);
+```
+
+`carMapper.xml`：
+
+```xml
+<delete id="deleteBatchById">
+    delete from t_car where id in (${ids})
+</delete>
+```
+
+### (4) 模糊查询
+
+`CarMapper.java`：
+
+```java
+List<Car> queryLike(String brand);
+```
+
+`carMapper.xml`：
+
+```xml
+<select id="queryLike" resultType="com.zzy.crud2.pojo.Car">
+    select id,
+           car_num as carNum,
+           brand,
+           guide_price as guidePrice,
+           produce_time as produceTime,
+           car_type as carType
+    from t_car
+    where brand like '%${brand}%'
+</select>
+```
+
+这样其实更多：`"%"#{brand}"%"`。
+
+## 2、别名机制
+
+给 pojo 类一个简称，在 Mybatis 核心配置文件中进行配置，不区分大小写：
+
+```xml
+<typeAliases>
+    <typeAlias type="com.zzy.crud2.pojo.Car" alias="Car" />
+</typeAliases>
+```
+
+namespace 没有别名。
+
+省略 `alias` 之后别名就是类的简名。
+
+也可以使用如下方式，将包下所有类自动起别名。
+
+```xml
+<typeAliases>
+    <!--<typeAlias type="com.zzy.crud2.pojo.Car" alias="Car" />-->
+    <package name="com.zzy.crud2.pojo"/>
+</typeAliases>
+```
+
+## 3、mappers
+
+```xml
+<!--class 标签内填写类的全限定名称-->
+<!--会自动查找 com/zzy/crud2/mapper/CarMapper.xml-->
+<!--可以在 resources 中新建 com/zzy/crud2/mapper 目录并将 CarMapper.xml 放入-->
+<mapper class="com.zzy.crud2.mapper.CarMapper"></mapper>
+```
+
+最常用的使用方式为：
+
+```xml
+<!--使用这种方式将包下所有 xxxMapper.java 与 xxxMapper.xml 进行绑定-->
+<package name="com.zzy.crud2.mapper"/>
+```
+
+## 4、IDEA 配置模板文件
+
+![image-20221114101752196](img/image-20221114101752196.png)
+
+## 5、插入数据时获取自动生成的主键
+
+`CarMapper.java`：
+
+```java
+int insertAndGetKey(Car car);
+```
+
+`CarMapper.xml`：
+
+```xml
+<insert id="insertAndGetKey" useGeneratedKeys="true" keyProperty="id">
+    insert into t_car
+        (id, car_num, brand, guide_price, produce_time, car_type)
+    values
+        (null, #{carNum}, #{brand}, #{guidePrice}, #{produceTime}, #{carType})
+</insert>
+```
+
+可以将生成的主键封装到 pojo 对象中。
+
+# 十、Mybatis 参数处理
+
+## 1、单个简单类型参数
+
+简单类型包括：
+
+- 八种基本数据类型及其包装类
+- String
+- Date
+
+可以在 `XXXMapper.xml` 中填入参数类型告知 Mybatis 参数类型：
+
+```xml
+<select id="queryByAge" resultType="Student" parameterType="long">
+    select *
+    from t_student
+    where age = #{id}
+</select>
+```
+
+但 Mybatis 有类型判断机制，进而使用相应的 JDBC 方法进行赋值。
+
+## 2、Map 参数
+
+## 3、实体类参数
+
+## 4、多参数
+
+`StudentMapper.java` 中，使用姓名和年龄查询：
+
+```java
+Student queryByNameAndAge(String name, Integer age);
+```
+
+在 Mybatis 中，多参数使用 Map 进行传参：
+
+​	map.put("arg0", name)
+
+​	map.put("arg1", age)
+
+或者
+
+​	map.put("param1", name)
+
+​	map.put("param2", age)
+
+因此，`StudentMapper.xml` 中：
+
+```xml
+<select id="queryByNameAndAge" resultType="Student">
+    select * 
+    from t_student 
+    where name = #{arg0} and age = #{arg1}
+</select>
+```
+
+## 5、Param 注解
+
+使用 Param 注解告知 Mybatis 多参数时，应该使用什么 key 值。
+
+`StudentMapper.java` 中：
+
+```java
+Student queryByNameAndAge2(@Param("name") String name, @Param("age") Integer age);
+```
+
+`StudentMapper.xml` 中：
+
+```xml
+<select id="queryByNameAndAge2" resultType="Student">
+    select *
+    from t_student
+    where name = #{name} and age = #{age}
+</select>
+```
+
+# 十一、Mybatis 查询语句专题
+
+如果没有合适的 pojo，可以使用 map 进行接收。
+
+返回大 Map 集合。
+
+## 1、结果映射
+
+当数据库中的字段名和 pojo 类中的属性名不一致时，可以使用给查询列起别名的方式解决，但这种方式在所有的查询中都要起别名。另一个方案是使用 `resultMap` 标签，用来规定数据库字段与 pojo 类属性的映射关系。
+
+`resultMap` 标签的使用：
+
+```xml
+<!--id 是结果映射集的标识，type 是pojo类名-->
+<resultMap id="StudentResultMap" type="Student">
+    <!--表的主键-->
+    <!--property pojo 类的属性-->
+    <!--column 表的字段-->
+    <id property="id" column="id" />
+    <result property="name" column="name" />
+    <result property="age" column="age" />
+    <result property="height" column="height" />
+    <result property="birth" column="birth" />
+    <result property="sex" column="sex" />
+</resultMap>
+```
+
+```xml
+<select id="queryByAge" resultMap="StudentResultMap">
+    select *
+    from t_student
+    where age = #{id}
+</select>
+```
+
+## 2、驼峰命名自动映射
+
+在 Mybatis 核心配置文件中，进行如下设置：
+
+```xml
+<settings>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+</settings>
+```
+
+Pojo 类属性名和数据库字段名均符合规范时可以使用。
+
+## 3、查询总记录条数
+
+在 `xxxMapper.xml` 中，需要规定查询结果类型：
+
+```xml
+<select id="countAll" resultType="int">
+    select count(*)
+    from t_student
+</select>
+```
+
+# 十二、动态 SQL
+
+## 1、if 标签
+
+`CarMapper.java` 中，抽象方法可以接受多个参数：
+
+```java
+List<Car> queryByMultiConditions(@Param("brand") String brand, @Param("guidePrice") BigDecimal guidePrice, @Param("carType") String carType);
+```
+
+`CarMapper.xml` 中，使用 `if` 标签将选取的参数拼接到 SQL 语句中：
+
+```xml
+<select id="queryByMultiConditions" resultType="Car">
+    select *
+    from t_car
+    where
+        <if test="brand != null and brand != ''">
+            brand like "%"#{brand}"%"
+        </if>
+        <if test="guidePrice != null and guidePrice != ''">
+            and guide_price > #{guidePrice}
+        </if>
+        <if test="carType != null and carType != ''">
+            and car_type like "%"#{carType}"%"
+        </if>
+</select>
+```
+
+**出现的 bug**
+
+当三个条件都为 `null` 时，SQL 语句变为：
+
+```
+select * from t_car where
+```
+
+这有语法错误，可以在 where 后添加 1=1。
+
+```xml
+<select id="queryByMultiConditions" resultType="Car">
+    select *
+    from t_car
+    where 1=1
+        <if test="brand != null and brand != ''">
+            and brand like "%"#{brand}"%"
+        </if>
+        <if test="guidePrice != null and guidePrice != ''">
+            and guide_price > #{guidePrice}
+        </if>
+        <if test="carType != null and carType != ''">
+            and car_type like "%"#{carType}"%"
+        </if>
+</select>
+```
+
+## 2、where 标签
+
+让 where 子句更加智能。
+
+- 所有条件为空时，不会生成 where 子句
+- 自动添加或删除 and/or
+
+`CarMapper.java` 中：
+
+```java
+List<Car> queryByMultiConditionsWithWhere(@Param("brand") String brand, @Param("guidePrice") BigDecimal guidePrice, @Param("carType") String carType);
+```
+
+`CarMapper.xml` 中：
+
+```xml
+<select id="queryByMultiConditionsWithWhere" resultType="Car">
+    select *
+    from t_car
+    <where>
+        <if test="brand != null and brand != ''">
+            brand like "%"#{brand}"%"
+        </if>
+        <if test="guidePrice != null and guidePrice != ''">
+            guide_price > #{guidePrice}
+        </if>
+        <if test="carType != null and carType != ''">
+            car_type like "%"#{carType}"%"
+        </if>
+    </where>
+</select>
+```
+
+## 3、trim 标签
+
+给标签内的语句加前缀、去前缀、加后缀、去后缀。
+
+`CarMapper.java` 中：
+
+```java
+List<Car> queryByMultiConditionsWithTrim(@Param("brand") String brand, @Param("guidePrice") BigDecimal guidePrice, @Param("carType") String carType);
+```
+
+`CarMapper.xml` 中：
+
+```xml
+<select id="queryByMultiConditionsWithTrim" resultType="Car">
+    select *
+    from t_car
+    <trim prefix="where" suffixOverrides="and|or">
+        <if test="brand != null and brand != ''">
+            brand like "%"#{brand}"%" and
+        </if>
+        <if test="guidePrice != null and guidePrice != ''">
+            guide_price > #{guidePrice} and
+        </if>
+        <if test="carType != null and carType != ''">
+            car_type like "%"#{carType}"%" and
+        </if>
+    </trim>
+</select>
+```
+
+如果 `trim` 标签内没有任何语句，便不会加前缀 `where`。
+
+添加的语句会去除后面的 `and`。
+
+## 4、set 标签
+
+通常使用在 update 语句中。
+
+可以自动添加 `set`，自动添加与删除 `,`。
+
+需求：传入 pojo 类更新记录，值为 `null` 的属性不更新。
+
+传入 pojo 类更新记录，`CarMapper.java` 中：
+
+```java
+int updateByIdWithSet(Car car);
+```
+
+`CarMapper.xml` 中：
+
+```xml
+<update id="updateByIdWithSet">
+    update t_car
+    <set>
+        <if test="carNum != null and carNum != ''">
+            car_num = #{carNum}
+        </if>
+        <if test="brand != null and brand != ''">
+            brand = #{brand}
+        </if>
+        <if test="guidePrice != null and guidePrice != ''">
+            guide_price = #{guidePrice}
+        </if>
+        <if test="produceTime != null and produceTime != ''">
+            produce_time = #{produceTime}
+        </if>
+        <if test="carType != null and carType != ''">
+            car_type = #{carType}
+        </if>
+    </set>
+    where id = #{id}
+</update>
+```
+
+## 5、choose/when/otherwise
+
+需求：首先根据 `brand` 查询，如果 `brand` 不存在；则根据 `guide_price` 查询；否则根据 `car_type` 查询记录。
+
+`CarMapper.java` 中：
+
+```java
+List<Car> queryByBrand(@Param("brand") String brand, @Param("guidePrice") BigDecimal guidePrice, @Param("carType") String carType);
+```
+
+`CarMapper.xml` 中：
+
+```xml
+<select id="queryByBrand" resultType="Car">
+    select *
+    from t_car
+    <choose>
+        <when test="brand != null and brand != ''">
+            where brand like "%"#{brand}"%"
+        </when>
+        <when test="guidePrice != null and guidePrice != ''">
+            where guide_price > #{guidePrice}
+        </when>
+        <when test="carType != null and carType != ''">
+            where car_type like "%"#{carType}"%"
+        </when>
+    </choose>
+</select>
+```
+
+## 6、foreach 标签
+
+### (1) 批量删除
+
+需求：根据 id 数组批量删除记录。
+
+`CarMapper.java` 中：
+
+```java
+int deleteByIds(@Param("ids") Integer[] ids);
+```
+
+`CarMapper.xml` 中：
+
+```xml
+<delete id="deleteByIds">
+    delete
+    from t_car
+    where id in
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+</delete>
+```
+
+### (2) 批量添加
+
+需求：使用 `Car` 列表批量添加数据。
+
+`CarMapper.java` 中：
+
+```java
+int insertCars(@Param("cars") List<Car> cars);
+```
+
+`CarMapper.xml` 中：
+
+```xml
+<insert id="insertCars">
+    insert into t_car
+    (id, car_num, brand, guide_price, produce_time, car_type) values
+    <foreach collection="cars" item="car" separator="," >
+        (#{car.id}, #{car.carNum}, #{car.brand}, #{car.guidePrice}, #{car.produceTime}, #{car.carType})
+    </foreach>
+</insert>
 ```
