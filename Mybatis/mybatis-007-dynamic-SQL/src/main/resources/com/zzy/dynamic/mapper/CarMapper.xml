@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zzy.dynamic.mapper.CarMapper">
+    <select id="queryByMultiConditions" resultType="Car">
+        select *
+        from t_car
+        where 1=1
+            <if test="brand != null and brand != ''">
+                and brand like "%"#{brand}"%"
+            </if>
+            <if test="guidePrice != null and guidePrice != ''">
+                and guide_price > #{guidePrice}
+            </if>
+            <if test="carType != null and carType != ''">
+                and car_type like "%"#{carType}"%"
+            </if>
+    </select>
+
+    <select id="queryByMultiConditionsWithWhere" resultType="Car">
+        select *
+        from t_car
+        <where>
+            <if test="brand != null and brand != ''">
+                brand like "%"#{brand}"%"
+            </if>
+            <if test="guidePrice != null and guidePrice != ''">
+                guide_price > #{guidePrice}
+            </if>
+            <if test="carType != null and carType != ''">
+                car_type like "%"#{carType}"%"
+            </if>
+        </where>
+    </select>
+
+    <select id="queryByMultiConditionsWithTrim" resultType="Car">
+        select *
+        from t_car
+        <trim prefix="where" suffixOverrides="and|or">
+            <if test="brand != null and brand != ''">
+                brand like "%"#{brand}"%" and
+            </if>
+            <if test="guidePrice != null and guidePrice != ''">
+                guide_price > #{guidePrice} and
+            </if>
+            <if test="carType != null and carType != ''">
+                car_type like "%"#{carType}"%" and
+            </if>
+        </trim>
+    </select>
+
+    <update id="updateByIdWithSet">
+        update t_car
+        <set>
+            <if test="carNum != null and carNum != ''">
+                car_num = #{carNum}
+            </if>
+            <if test="brand != null and brand != ''">
+                brand = #{brand}
+            </if>
+            <if test="guidePrice != null and guidePrice != ''">
+                guide_price = #{guidePrice}
+            </if>
+            <if test="produceTime != null and produceTime != ''">
+                produce_time = #{produceTime}
+            </if>
+            <if test="carType != null and carType != ''">
+                car_type = #{carType}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <select id="queryByBrand" resultType="Car">
+        select *
+        from t_car
+        <choose>
+            <when test="brand != null and brand != ''">
+                where brand like "%"#{brand}"%"
+            </when>
+            <when test="guidePrice != null and guidePrice != ''">
+                where guide_price > #{guidePrice}
+            </when>
+            <when test="carType != null and carType != ''">
+                where car_type like "%"#{carType}"%"
+            </when>
+        </choose>
+    </select>
+
+    <delete id="deleteByIds">
+        delete
+        from t_car
+        where id in
+            <foreach collection="ids" item="id" separator="," open="(" close=")">
+                #{id}
+            </foreach>
+    </delete>
+
+    <insert id="insertCars">
+        insert into t_car
+        (id, car_num, brand, guide_price, produce_time, car_type) values
+        <foreach collection="cars" item="car" separator="," >
+            (#{car.id}, #{car.carNum}, #{car.brand}, #{car.guidePrice}, #{car.produceTime}, #{car.carType})
+        </foreach>
+    </insert>
+</mapper>

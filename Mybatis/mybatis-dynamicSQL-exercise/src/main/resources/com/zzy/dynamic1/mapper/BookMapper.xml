@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zzy.dynamic1.mapper.BookMapper">
+    <sql id="BookColumn">
+        id, name, author, price, sales, stock, img_path
+    </sql>
+
+    <insert id="insertBook">
+        insert into t_book
+            (<include refid="BookColumn"></include>)
+        values
+            (#{id}, #{name}, #{author}, #{price}, #{sales},#{stock}, #{imgPath})
+    </insert>
+
+    <select id="queryBookByNameAndAuthorAndSales" resultType="Book">
+        select <include refid="BookColumn"></include>
+        from t_book
+        <where>
+            <if test="name != null and name != ''">
+                name like "%"#{name}"%"
+            </if>
+            <if test="author != null and author != ''">
+                and author like "%"#{author}"%"
+            </if>
+            <if test="sales != null">
+                and sales > #{sales}
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteByIds">
+        delete from t_book where
+        <foreach collection="ids" item="id" separator="or">
+            id = #{id}
+        </foreach>
+    </delete>
+</mapper>

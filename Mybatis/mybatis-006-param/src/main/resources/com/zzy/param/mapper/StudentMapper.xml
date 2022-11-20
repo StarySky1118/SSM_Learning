@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zzy.param.mapper.StudentMapper">
+    <resultMap id="StudentResultMap" type="Student">
+        <id property="id" column="id" />
+        <result property="name" column="name" />
+        <result property="age" column="age" />
+        <result property="height" column="height" />
+        <result property="birth" column="birth" />
+        <result property="sex" column="sex" />
+    </resultMap>
+    
+    <select id="queryByAge" resultMap="StudentResultMap">
+        select *
+        from t_student
+        where age = #{id}
+    </select>
+
+    <select id="queryByBirth" resultType="Student">
+        select *
+        from t_student
+        where birth = #{birth}
+    </select>
+
+    <select id="queryByNameAndAge" resultType="Student">
+        select *
+        from t_student
+        where name = #{arg0} and age = #{arg1}
+    </select>
+
+    <select id="queryByNameAndAge2" resultType="Student">
+        select *
+        from t_student
+        where name = #{name} and age = #{age}
+    </select>
+
+    <select id="queryAll" resultType="Student">
+        select *
+        from t_student
+    </select>
+
+    <select id="countAll" resultType="int">
+        select count(*)
+        from t_student
+    </select>
+</mapper>

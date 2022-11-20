@@ -1,0 +1,86 @@
+package com.zzy.param.pojo;
+
+import java.util.Date;
+
+public class Student {
+    private Long id; // 自增主键
+    private String name; // 姓名
+    private Integer age; // 年龄
+    private Double height; // 身高
+    private Date birth; // 生日
+    private Character sex; // 性别
+
+    // 构造器
+    public Student() {
+    }
+
+    public Student(Long id, String name, Integer age, Double height, Date birth, Character sex) {
+        this.id = id;
+        this.name = name;
+        this.age = age;
+        this.height = height;
+        this.birth = birth;
+        this.sex = sex;
+    }
+
+    // getter and setter
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+
+    public Double getHeight() {
+        return height;
+    }
+
+    public void setHeight(Double height) {
+        this.height = height;
+    }
+
+    public Date getBirth() {
+        return birth;
+    }
+
+    public void setBirth(Date birth) {
+        this.birth = birth;
+    }
+
+    public Character getSex() {
+        return sex;
+    }
+
+    public void setSex(Character sex) {
+        this.sex = sex;
+    }
+
+    @Override
+    public String toString() {
+        return "Student{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", age=" + age +
+                ", height=" + height +
+                ", birth=" + birth +
+                ", sex=" + sex +
+                '}';
+    }
+}

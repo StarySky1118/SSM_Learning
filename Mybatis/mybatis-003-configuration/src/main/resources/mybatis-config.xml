@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+    <properties resource="jdbc.properties"></properties>
+
+    <environments default="bjpowernode">
+        <environment id="bjpowernode">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="${driver}"/>
+                <property name="url" value="${urlForBjpowernode}"/>
+                <property name="username" value="${username}"/>
+                <property name="password" value="${password}"/>
+            </dataSource>
+        </environment>
+
+        <environment id="book">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
+                <!--连接 book 数据库-->
+                <property name="url" value="jdbc:mysql://localhost:3306/book"/>
+                <property name="username" value="root"/>
+                <property name="password" value="991118"/>
+            </dataSource>
+        </environment>
+    </environments>
+
+    <mappers>
+        <!--自动在类的根路径下查找-->
+        <mapper resource="carMapper.xml"/>
+    </mappers>
+
+</configuration>

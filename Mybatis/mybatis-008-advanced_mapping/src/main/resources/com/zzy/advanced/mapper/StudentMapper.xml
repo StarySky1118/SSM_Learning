@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zzy.advanced.mapper.StudentMapper">
+    <cache type="org.mybatis.caches.ehcache.EhcacheCache"/>
+
+    <resultMap id="StudentResultMap" type="Student">
+        <id property="sid" column="sid"></id>
+        <result property="sname" column="sname"></result>
+        <result property="clazz.cid" column="cid"></result>
+        <result property="clazz.cname" column="cname"></result>
+    </resultMap>
+
+    <resultMap id="StudentResultMapAssociation" type="Student">
+        <id property="sid" column="sid"></id>
+        <result property="sname" column="sname"></result>
+        <association property="clazz" javaType="Clazz">
+            <id property="cid" column="cid"></id>
+            <result property="cname" column="cname"></result>
+        </association>
+    </resultMap>
+
+    <resultMap id="StudentResultMapStep" type="Student">
+        <id property="sid" column="sid"></id>
+        <result property="sname" column="sname"></result>
+        <association property="clazz" select="com.zzy.advanced.mapper.ClazzMapper.queryClazzByCid" column="cid"></association>
+    </resultMap>
+
+    <resultMap id="StudentInfo" type="Student">
+        <id property="sid" column="sid"></id>
+        <result property="sname" column="sname"></result>
+        <collection property="teachingRelationships" column="sid" select="com.zzy.advanced.mapper.TeachingRelationshipMapper.queryTeachingRelationshipsBySid"></collection>
+    </resultMap>
+
+    <select id="queryStudentBySidAssociation" resultMap="StudentResultMapAssociation">
+        select s.sid, s.sname, c.cid, c.cname
+        from t_student s left outer join t_clazz c on s.cid = c.cid
+        where sid = #{sid}
+    </select>
+
+    <select id="queryStudentsByCid" resultType="Student">
+        select sid, sname, cid
+        from t_student
+        where cid = #{cid}
+    </select>
+
+    <select id="queryStudentBySid" resultMap="StudentResultMap">
+        select s.sid, s.sname, c.cid, c.cname
+        from t_student s left outer join t_clazz c on s.cid = c.cid
+        where sid = #{sid}
+    </select>
+
+    <select id="queryStudentBySidAssociationByStep" resultMap="StudentResultMapStep">
+        select sid, sname, cid
+        from t_student
+        where sid = #{sid}
+    </select>
+
+    <select id="queryStudentInfoBySid" resultMap="StudentInfo">
+        select sid, sname
+        from t_student
+        where sid = #{sid}
+    </select>
+</mapper>

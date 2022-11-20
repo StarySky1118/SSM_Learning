@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zzy.advanced.mapper.ClazzMapper">
+    <sql id="ClazzColumn">
+        cid, cname
+    </sql>
+
+    <resultMap id="ClazzStep" type="Clazz">
+        <id property="cid" column="cid"></id>
+        <result property="cname" column="cname"></result>
+        <collection property="students" select="com.zzy.advanced.mapper.StudentMapper.queryStudentsByCid" column="cid"></collection>
+    </resultMap>
+
+    <insert id="insertClazz">
+        insert into t_clazz
+            (<include refid="ClazzColumn"></include>)
+        values
+            (#{cid}, #{cname})
+    </insert>
+
+    <select id="queryClazzByCid" resultType="Clazz">
+        select cid, cname
+        from t_clazz
+        where cid = #{cid}
+    </select>
+
+    <select id="queryClazzByCidStep" resultMap="ClazzStep">
+        select cid, cname
+        from t_clazz
+        where cid = #{cid}
+    </select>
+</mapper>
