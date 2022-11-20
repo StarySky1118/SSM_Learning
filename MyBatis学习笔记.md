@@ -2,7 +2,7 @@
 
 ## 各种依赖
 
-**Mybatis 依赖**
+### Mybatis 依赖
 
 ```xml
 <!--Mybatis依赖-->
@@ -14,7 +14,7 @@
 </dependency>
 ```
 
-**MySql 驱动依赖**
+### MySql 驱动依赖
 
 ```xml
 <!--mysql驱动依赖-->
@@ -26,7 +26,7 @@
 </dependency>
 ```
 
-**junit 依赖**
+### junit 依赖
 
 ```xml
 <!--junit依赖-->
@@ -39,7 +39,7 @@
 </dependency>
 ```
 
-**logback 依赖**
+### logback 依赖
 
 ```xml
 <!--logback依赖-->
@@ -52,7 +52,7 @@
 </dependency>
 ```
 
-**dom4j** 
+### dom4j 
 
 ```xml
 <!--dom4j依赖-->
@@ -64,7 +64,7 @@
 </dependency>
 ```
 
-**jaxen**
+### jaxen
 
 ```xml
 <!--jaxen依赖-->
@@ -76,7 +76,7 @@
 </dependency>
 ```
 
-**servlet**
+### servlet
 
 ```xml
 <!--servlet依赖-->
@@ -86,6 +86,29 @@
     <artifactId>javax.servlet-api</artifactId>
     <version>4.0.1</version>
     <scope>provided</scope>
+</dependency>
+```
+
+### Mybatis 集成 EhCache
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.mybatis.caches/mybatis-ehcache -->
+<dependency>
+    <groupId>org.mybatis.caches</groupId>
+    <artifactId>mybatis-ehcache</artifactId>
+    <version>1.2.2</version>
+</dependency>
+```
+
+### pageHelper
+
+```xml
+<!--pagehelper 依赖-->
+<!-- https://mvnrepository.com/artifact/com.github.pagehelper/pagehelper -->
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper</artifactId>
+    <version>5.3.1</version>
 </dependency>
 ```
 
@@ -1813,4 +1836,566 @@ int insertCars(@Param("cars") List<Car> cars);
         (#{car.id}, #{car.carNum}, #{car.brand}, #{car.guidePrice}, #{car.produceTime}, #{car.carType})
     </foreach>
 </insert>
+```
+
+## 7、sql 和 include 标签
+
+将公共的 sql 语句提取出来实现代码复用。
+
+```xml
+<sql id="BookColumn">
+    id, name, author, price, sales, stock, img_path
+</sql>
+```
+
+```xml
+<insert id="insertBook">
+    insert into t_book
+        (<include refid="BookColumn"></include>)
+    values
+        (#{id}, #{name}, #{author}, #{price}, #{sales},#{stock}, #{imgPath})
+</insert>
+```
+
+# 十三、Mybatis 高级映射及延迟加载
+
+使用两张表：学生表和班级表，是多对一的关系。
+
+## 1、实体类的关系
+
+在数据库中，学生表有外键 `cid`，可以通过其定位到一条班级记录。但 pojo 类中，`cId` 并不能算 `Student` 实体类的属性，`cId` 只能是 `Clazz` 实体类的属性。为了实现这种从 `Student` 对象可以直接找到 `Clazz` 对象的概念，可以给 `Student` 中添加 `Clazz` 的引用。即在多的一方实体类中添加少的一方实体类的引用。 
+
+```java
+public class Student {
+    private Integer sid; // 学号
+    private String sname; // 姓名
+    private Clazz clazz; // 所属班级
+```
+
+## 2、多对一
+
+### (1) 级联属性映射
+
+根据 `sid` 获取学生信息及其关联的班级信息。
+
+`StudentMapper.java` 中：
+
+```java
+Student queryStudentBySid(Integer sid);
+```
+
+`StudentMapper.xml` 中：
+
+SQL 语句使用外连接查询，`t_student` 表作为主表：
+
+```xml
+<select id="queryStudentBySid" resultMap="StudentResultMap">
+    select s.sid, s.sname, c.cid, c.cname
+    from t_student s left outer join t_clazz c on s.cid = c.cid
+    where sid = #{sid}
+</select>
+```
+
+还应该告知 Mybatis 将查询到的参数注入到 pojo 类中哪个属性：
+
+```xml
+<resultMap id="StudentResultMap" type="Student">
+    <!--property为pojo类属性名，column为数据库字段名-->
+    <id property="sid" column="sid"></id>
+    <result property="sname" column="sname"></result>
+    <result property="clazz.cid" column="cid"></result>
+    <result property="clazz.cname" column="cname"></result>
+</resultMap>
+```
+
+### (2) 使用 association
+
+`StudentMapper.java`中：
+
+```java
+Student queryStudentBySidAssociation(Integer sid);
+```
+
+`StudentMapper.xml`
+
+使用 `association` 标签告知 Mybatis `Student` 类关联了 `Clazz`，以何种方式进行参数注入。
+
+```xml
+<resultMap id="StudentResultMapAssociation" type="Student">
+    <id property="sid" column="sid"></id>
+    <result property="sname" column="sname"></result>
+    <association property="clazz" javaType="Clazz">
+        <id property="cid" column="cid"></id>
+        <result property="cname" column="cname"></result>
+    </association>
+</resultMap>
+```
+
+```xml
+<select id="queryStudentBySidAssociation" resultMap="StudentResultMapAssociation">
+    select s.sid, s.sname, c.cid, c.cname
+    from t_student s left outer join t_clazz c on s.cid = c.cid
+    where sid = #{sid}
+</select>
+```
+
+### (3) 分步查询(重点)
+
+优点：可复用、延迟加载。
+
+查询 `t_student` 表获取 `sid`、`sname` 和 `cid`；再根据 `cid` 查询班级信息。
+
+`StudentMapper.java`
+
+```java
+Student queryStudentBySidAssociationByStep(Integer sid);
+```
+
+`StudentMapper.xml`
+
+查询学生记录的 `sid`、`sname` 和 `cid`，并将 `cid` 传给 `ClazzMapper.xml` 中的一条 SQL 语句。
+
+结果映射：
+
+```xml
+<resultMap id="StudentResultMapStep" type="Student">
+    <id property="sid" column="sid"></id>
+    <result property="sname" column="sname"></result>
+    <!--pojo 类的 clazz 属性的参数注入交由另一条 SQL 语句进行，传送的参数为 cid-->
+    <!--com.zzy.advanced.mapper.ClazzMapper.queryClazzByCid 也是接口方法的全类名-->
+    <association property="clazz" select="com.zzy.advanced.mapper.ClazzMapper.queryClazzByCid" column="cid"></association>
+</resultMap>
+```
+
+```xml
+<select id="queryStudentBySidAssociationByStep" resultMap="StudentResultMapStep">
+    select sid, sname, cid
+    from t_student
+    where sid = #{sid}
+</select>
+```
+
+`ClazzMapper.java`
+
+```java
+Clazz queryClazzByCid(Integer cid);
+```
+
+`ClazzMapper.xml`
+
+该 SQL 语句负责进行 `Student` 中 `clazz` 的注入。
+
+```xml
+<select id="queryClazzByCid" resultType="Clazz">
+    select cid, cname
+    from t_clazz
+    where cid = #{cid}
+</select>
+```
+
+## 3、延迟加载
+
+核心原理：用到的时候执行查询，不用的时候不查询。
+
+作用：提高性能。
+
+> 使用分步查询根本没有用到表连接，性能得到提升。
+
+Mybatis 中开启懒加载：
+
+默认不使用懒加载。
+
+在 `association` 标签中添加 `fetchtype='lazy'`
+
+```xml
+<association property="clazz" select="com.zzy.advanced.mapper.ClazzMapper.queryClazzByCid" column="cid" fetchType="lazy"></association>
+```
+
+如果使用到了 `Student` 对象的 `clazz` 属性，第二条 SQL 会执行；否则，不会执行第二条 SQL 语句。
+
+全局延迟加载开关：在 Mybatis 核心配置文件中，进行如下配置。
+
+```xml
+<settings>
+    <setting name="lazyLoadingEnabled" value="true"/>
+</settings>
+```
+
+实际开发中，大部分情况需要开启延迟加载机制。特殊情况，使用 `fetchType = eager` 取消懒加载。
+
+## 4、一对多
+
+一个班级对应多个学生，在数据库中可以使用 `cid` 属性查询班级信息，顺带查询班级中的学生记录。但是 `Student` 对象没有 `cid`，即使有也不能全部生成到内存中进行查询。因此 `Clazz` 对象应有 `Student` 对象列表。
+
+### (1) Collection 方式 
+
+### (2) 分步查询
+
+首先通过 `cid` 获取班级信息，然后通过 `cid` 查询学生信息进行赋值。
+
+`ClazzMapper.java`
+
+```java
+Clazz queryClazzByCidStep(Integer cid);
+```
+
+`ClazzMapper.xml`
+
+查询结果映射：
+
+```xml
+<resultMap id="ClazzStep" type="Clazz">
+    <id property="cid" column="cid"></id>
+    <result property="cname" column="cname"></result>
+    <!--students 参数的注入交由另一个 SQL 语句，传参 cid-->
+    <collection property="students" select="com.zzy.advanced.mapper.StudentMapper.queryStudentsByCid" column="cid"></collection>
+</resultMap>
+```
+
+查询语句：
+
+```xml
+<select id="queryClazzByCidStep" resultMap="ClazzStep">
+    select cid, cname
+    from t_clazz
+    where cid = #{cid}
+</select>
+```
+
+`StudentMapper.java`
+
+```java
+List<Student> queryStudentsByCid(Integer cid);
+```
+
+`StudentMapper.xml`
+
+查询语句：
+
+```xml
+<select id="queryStudentsByCid" resultType="Student">
+    select sid, sname, cid
+    from t_student
+    where cid = #{cid}
+</select>
+```
+
+# 十四、Mybatis 缓存
+
+## 1、Mybatis 缓存机制
+
+![image-20221118163438149](img/image-20221118163438149.png)
+
+数据库中的数据持久化在硬盘中，缓存机制就是将查询到的结果保存在内存中，方便下一次同一条 DML 语句执行时获取结果。
+
+缓存作用：通过减少 IO 的方式提高程序执行效率。
+
+## 2、一级缓存
+
+由 `SqlSession` 提供，默认开启。对当前 sql 会话生效。会话级缓存。
+
+一级缓存的清空：
+
+- 执行了 `sqlSession.clearCache()`
+- 执行了 DML 语句，和操作那张表没有关系
+
+## 3、二级缓存
+
+数据库级缓存。
+
+如何使用二级缓存：
+
+​	默认情况下，二级缓存开启，需要在对应的 `xxxMapper.xml` 中加入：`<cache />`
+
+​	对应的 pojo 类实现 `serializable` 接口。
+
+​	`sqlSesison` 提交或关闭后，一级缓存中的数据才会提交到二级缓存。
+
+在两次查找之间出现了 DML 语句，二级缓存失效。
+
+二级缓存属性设置：
+
+![image-20221119084909619](img/image-20221119084909619.png)
+
+## 4、Mybatis 集成 EhCache
+
+集成 Ehcache 是为了替代二级缓存。
+
+## 1、使用步骤
+
+**引入依赖**
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.mybatis.caches/mybatis-ehcache -->
+<dependency>
+    <groupId>org.mybatis.caches</groupId>
+    <artifactId>mybatis-ehcache</artifactId>
+    <version>1.2.2</version>
+</dependency>
+```
+
+**在类的根路径下引入 ehcache.xml 配置文件**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd"
+         updateCheck="false">
+    <!--磁盘存储:将缓存中暂时不使⽤的对象,转移到硬盘,类似于Windows系统的虚拟内存-->
+    <diskStore path="f:/ehcache"/>
+
+    <!--defaultCache：默认的管理策略-->
+    <!--eternal：设定缓存的elements是否永远不过期。如果为true，则缓存的数据始终有
+   效，如果为false那么还要根据timeToIdleSeconds，timeToLiveSeconds判断-->
+    <!--maxElementsInMemory：在内存中缓存的element的最⼤数⽬-->
+    <!--overflowToDisk：如果内存中数据超过内存限制，是否要缓存到磁盘上-->
+    <!--diskPersistent：是否在磁盘上持久化。指重启jvm后，数据是否有效。默认为false-
+   ->
+    <!-timeToIdleSeconds：对象空闲时间(单位：秒)，指对象在多⻓时间没有被访问就会失
+   效。只对eternal为false的有效。默认值0，表示⼀直可以访问-->
+    <!--timeToLiveSeconds：对象存活时间(单位：秒)，指对象从创建到失效所需要的时间。
+   只对eternal为false的有效。默认值0，表示⼀直可以访问-->
+    <!--memoryStoreEvictionPolicy：缓存的3 种清空策略-->
+    <!--FIFO：first in first out (先进先出)-->
+    <!--LFU：Less Frequently Used (最少使⽤).意思是⼀直以来最少被使⽤的。缓存的元
+   素有⼀个hit 属性，hit 值最⼩的将会被清出缓存-->
+    <!--LRU：Least Recently Used(最近最少使⽤). (ehcache 默认值).缓存的元素有⼀
+   个时间戳，当缓存容量满了，⽽⼜需要腾出地⽅来缓存新的元素的时候，那么现有缓存元素中时间戳
+   离当前时间最远的元素将被清出缓存-->
+    <defaultCache eternal="false" maxElementsInMemory="1000" overflowToDisk="false" diskPersistent="false"
+                  timeToIdleSeconds="0" timeToLiveSeconds="600" memoryStoreEvictionPolicy="LRU"/>
+</ehcache>
+```
+
+**修改 `xxxMapper.xml` 中的 `<cache/>` 标签**
+
+```xml
+<cache type="org.mybatis.caches.ehcache.EhcacheCache"/>
+```
+
+# 十五、Mybatis 逆向工程
+
+根据数据库表生成 pojo 类、xml 文件、Mapper 接口等。
+
+## 1、逆向工程的使用
+
+### (1) 精简版
+
+**在 `POM.xml` 中配置插件：**
+
+```xml
+<!--配置 mybatis 逆向工程插件-->
+<!--定制构建过程-->
+<build>
+    <!--可配置多个插件-->
+    <plugins>
+        <!--其中的⼀个插件：mybatis逆向⼯程插件-->
+        <plugin>
+            <!--插件的GAV坐标-->
+            <groupId>org.mybatis.generator</groupId>
+            <artifactId>mybatis-generator-maven-plugin</artifactId>
+            <version>1.4.1</version>
+            <!--允许覆盖-->
+            <configuration>
+                <overwrite>true</overwrite>
+            </configuration>
+            <!--插件的依赖-->
+            <dependencies>
+                <!--mysql驱动依赖-->
+                <dependency>
+                    <groupId>mysql</groupId>
+                    <artifactId>mysql-connector-java</artifactId>
+                    <version>8.0.30</version>
+                </dependency>
+            </dependencies>
+        </plugin>
+    </plugins>
+</build>
+```
+
+**配置 `generatorConfig.xml`**
+
+必须放在类的根路径下。generatorConfig.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+<generatorConfiguration>
+    <!--
+    targetRuntime有两个值：
+    MyBatis3Simple：⽣成的是基础版，只有基本的增删改查。
+    MyBatis3：⽣成的是增强版，除了基本的增删改查之外还有复杂的增删改查。
+    -->
+    <context id="DB2Tables" targetRuntime="MyBatis3Simple">
+        <!--防⽌⽣成重复代码-->
+        <plugin type="org.mybatis.generator.plugins.UnmergeableXmlMappersPlugin"/>
+
+        <commentGenerator>
+            <!--是否去掉⽣成⽇期-->
+            <property name="suppressDate" value="true"/>
+            <!--是否去除注释-->
+            <property name="suppressAllComments" value="true"/>
+        </commentGenerator>
+
+        <!--连接数据库信息-->
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+                        connectionURL="jdbc:mysql://localhost:3306/bjpowernode"
+                        userId="root"
+                        password="991118">
+        </jdbcConnection>
+
+        <!-- ⽣成pojo包名和位置 -->
+        <javaModelGenerator targetPackage="com.zzy.generator.pojo" targetProject="src/main/java">
+            <!--是否开启⼦包-->
+            <property name="enableSubPackages" value="true"/>
+            <!--是否去除字段名的前后空⽩-->
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <!-- ⽣成SQL映射⽂件的包名和位置 -->
+        <sqlMapGenerator targetPackage="com.zzy.generator.mapper" targetProject="src/main/resources">
+            <!--是否开启⼦包-->
+            <property name="enableSubPackages" value="true"/>
+        </sqlMapGenerator>
+
+        <!-- ⽣成Mapper接⼝的包名和位置 -->
+        <javaClientGenerator
+                type="xmlMapper"
+                targetPackage="com.zzy.generator.mapper"
+                targetProject="src/main/java">
+            <property name="enableSubPackages" value="true"/>
+        </javaClientGenerator>
+
+        <!-- 表名和对应的实体类名-->
+        <table tableName="t_car" domainObjectName="Car"/>
+    </context>
+</generatorConfiguration>
+```
+
+双击使用即可。
+
+![image-20221119135046953](img/image-20221119135046953.png)
+
+### (2) 复杂版 
+
+使用复杂版，在 pojo 包下会生成 `xxxExample.java`，这是用来封装查询条件的。
+
+使用案例
+
+```java
+public void testSelectByExample() {
+    SqlSession sqlSession = MybatisUtils.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+
+    // QBC风格：Query By Criteria，一种面向对象的查询方式，看不到 SQL 语句
+    CarExample carExample = new CarExample();
+    carExample.createCriteria().andBrandLike("%宝%");
+
+    List<Car> cars = mapper.selectByExample(carExample);
+    for (Car car : cars) {
+        System.out.println(car);
+    }
+
+    sqlSession.close();
+}
+```
+
+# 十六、Mybatis 使用 PageHelper
+
+## 1、MySQL 原生分页
+
+![image-20221120082648428](img/image-20221120082648428.png)
+
+## 2、PageHelper 插件
+
+**引入依赖**
+
+```xml
+<!--pagehelper 依赖-->
+<!-- https://mvnrepository.com/artifact/com.github.pagehelper/pagehelper -->
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper</artifactId>
+    <version>5.3.1</version>
+</dependency>
+```
+
+**在 `mybatis-config.xml` 中配置拦截器**
+
+```xml
+<plugins>
+    <plugin interceptor="com.github.pagehelper.PageInterceptor"></plugin>
+</plugins>
+```
+
+在执行 DQL 语句之前，启用分页功能。使用案例：
+
+```java
+public void testSelectAll() {
+    SqlSession sqlSession = MybatisUtils.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+
+    // 在执行 DQL 语句之前，开启分页功能
+    PageHelper.startPage(1, 3);
+
+    List<Car> cars = mapper.selectAll();
+    cars.forEach(car -> System.out.println(car));
+    sqlSession.close();
+}
+```
+
+使用 `PageInfo` 封装查询到的记录：
+
+```java
+public void testSelectAll() {
+    SqlSession sqlSession = MybatisUtils.openSession();
+    CarMapper mapper = sqlSession.getMapper(CarMapper.class);
+
+    PageHelper.startPage(2, 3);
+
+    List<Car> cars = mapper.selectAll();
+
+    PageInfo<Car> carPageInfo = new PageInfo<>(cars, 4);
+    System.out.println(carPageInfo);
+    sqlSession.close();
+}
+```
+
+输出的信息如下：
+
+```
+PageInfo{pageNum=2, pageSize=3, size=3, startRow=4, endRow=6, total=10, pages=4, list=Page{count=true, pageNum=2, pageSize=3, startRow=3, endRow=6, total=10, pages=4, reasonable=false, pageSizeZero=false}[Car{id=181, carNum='1103', brand='IQOO neo3', guidePrice=20.00, produceTime='2022-11-09', carType='燃油车'}, 
+Car{id=182, carNum='1103', brand='IQOO neo5', guidePrice=20.00, produceTime='2022-11-09', carType='燃油车'}, 
+Car{id=186, carNum='1104', brand='XiaoMi 10', guidePrice=3999.00, produceTime='2022-11-13', carType='燃油'}], 
+prePage=1, nextPage=3, isFirstPage=false, isLastPage=false, hasPreviousPage=true, hasNextPage=true, navigatePages=4, navigateFirstPage=1, navigateLastPage=4, navigatepageNums=[1, 2, 3, 4]}
+```
+
+# 十七、Mybatis 注解式开发
+
+单表简单增删改查，可以使用注解。复杂的 SQL 语句最好使用 xml 文件。
+
+使用案例：
+
+```java
+@Insert("insert into t_car values (null, #{carNum}, #{brand}, #{guidePrice}, #{produceTime}, #{carType})")
+int insert(Car car);
+
+@Delete("delete from t_car where id = #{id}")
+int deleteById(Long id);
+```
+
+```java
+@Select("select * from t_car")
+// 结果映射
+@Results({
+        @Result(property = "id", column = "id"),
+        @Result(property = "carNum", column = "car_num"),
+        @Result(property = "brand", column = "brand"),
+        @Result(property = "guidePrice", column = "guide_price"),
+        @Result(property = "produceTime", column = "produce_time"),
+        @Result(property = "carType", column = "car_type")
+})
+List<Car> queryAll();
 ```
