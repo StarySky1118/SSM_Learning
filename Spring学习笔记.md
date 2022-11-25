@@ -1,6 +1,39 @@
-# 20221106
+# 依赖
 
-## 一、框架概述
+## Spring-context 依赖
+
+```xml
+<!--Spring context 依赖-->
+<!-- https://mvnrepository.com/artifact/org.springframework/spring-context -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context</artifactId>
+    <version>6.0.0</version>
+</dependency>
+```
+
+## log4j2 依赖
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
+<!--log4j-core-->
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.19.0</version>
+</dependency>
+<!--log4j-slf4j2-impl-->
+<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j2-impl -->
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-slf4j2-impl</artifactId>
+    <version>2.19.0</version>
+    <!--将 test 改为 compile，测试类之外的地方也可以使用-->
+    <scope>test</scope>
+</dependency>
+```
+
+# 一、框架概述
 
 - 开源轻量级 JavaEE 框架。
 
@@ -14,24 +47,24 @@
   - 方便解耦，简化开发
   - AOP 支持
   - 方便测试
-  - 方便继承各种优秀框架
+  - 方便集成各种优秀框架
   - 方便事务管理
   - 降低 API 使用难度
   - 源码是经典学习范例
 
 Spring 5。
 
-## 二、软件要求
+**软件要求**
 
 Spring 6、JDK17。
 
-## 三、MVC 架构缺点
+**MVC 架构缺点**
 
-### 1、违背 OCP 原则
+1、违背 OCP 原则
 
 在扩展功能时，Dao 持久层代码修改，Service 层代码也要改。
 
-### 2、违背依赖倒置 DIP 原则
+2、违背依赖倒置 DIP 原则
 
 MVC 架构中，上依赖下，这就不符合依赖倒置原则。
 
@@ -41,7 +74,7 @@ MVC 架构中，上依赖下，这就不符合依赖倒置原则。
 
 解决措施：“控制反转(IoC：Inversion of Control)”。程序中不再采用硬编码方式 new 对象、不再采用硬编码方式维护对象的关系。
 
-## 四、Spring 框架
+四、Spring 框架
 
 实现了 IoC 这种思想。
 
@@ -54,17 +87,1328 @@ MVC 架构中，上依赖下，这就不符合依赖倒置原则。
 
 对象 A 和对象 B 之间的关系靠注入方式维护。
 
-### 1、Spring 八大模块
+**Spring 八大模块**
 
 ![image-20221107155752421](img/image-20221107155752421.png)
 
-### 2、Spring 特点
+2、Spring 特点
 
 非侵入式：不依赖。
 
-## 五、Spring 入门程序
+# 二、Spring 入门程序
 
-### 1、Spring 下载
+Spring 中文官网：http://spring.p2hp.com/
 
-中文官网：http://spring.p2hp.com/
+## 1、总体流程
+
+**引入依赖**
+
+引入 `Spring-context` 相当于引入了基础依赖。
+
+```xml
+<!--Spring context 依赖-->
+<!-- https://mvnrepository.com/artifact/org.springframework/spring-context -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context</artifactId>
+    <version>6.0.0</version>
+</dependency>
+```
+
+会关联其他依赖：
+
+![image-20221121084718641](img/image-20221121084718641.png)
+
+```xml
+<!--junit依赖-->
+<!-- https://mvnrepository.com/artifact/junit/junit -->
+<dependency>
+    <groupId>junit</groupId>
+    <artifactId>junit</artifactId>
+    <version>4.13.2</version>
+    <scope>test</scope>
+</dependency>
+```
+
+**定义 bean**
+
+```java
+package com.zzy.introduction.bean;
+
+/**
+ * 用户 bean 类
+ */
+public class User {
+}
+```
+
+**编写 Spring 配置文件 beans.xml，放在类的根路径下**
+
+![image-20221121085245884](img/image-20221121085245884.png)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!--id 类的标识，不能重复-->
+    <!--class 类的全限定名称-->
+    <bean id="userBean" class="com.zzy.introduction.bean.User"></bean>
+</beans>
+```
+
+编写测试程序：
+
+```java
+public void testSpring() {
+    // 初始化 Spring 容器上下文
+    ApplicationContext applicationContext = new ClassPathXmlApplicationContext("beans.xml");
+    Object userBean = applicationContext.getBean("userBean");
+    System.out.println(userBean);
+}
+```
+
+## 2、程序剖析
+
+### (1) 创建对象机制
+
+底层使用 dom4j 解析 xml 配置文件，使用反射机制调用**无参构造方法**创建对象。
+
+> 一定要保证无参构造方法的存在。
+
+### (2) 配置文件 beans.xml
+
+配置文件名称自己可以任意指定，并且可以有多个配置文件。
+
+配置文件中的类可以是 JDK 中的类。
+
+### (3) 向下转型问题
+
+```java
+User userBean = applicationContext.getBean("userBean", User.class);
+```
+
+指定 class 避免向下转型。
+
+### (4) 顶级父接口 BeanFactory
+
+Spring 底层 IoC 实现：XML 解析 + 工厂模式 + 反射机制。
+
+并不是在调用 `getBean()` 方法时创建 bean 对象，只要解析了 xml 文件就会创建对象。
+
+## 3、Spring 启用 Log4j2
+
+**引入依赖**
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
+<!--log4j-core-->
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.19.0</version>
+</dependency>
+<!--log4j-slf4j2-impl-->
+<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j2-impl -->
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-slf4j2-impl</artifactId>
+    <version>2.19.0</version>
+    <scope>test</scope>
+</dependency>
+```
+
+**在类的根路径下提供 log4j2.xml**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration>
+
+    <loggers>
+        <!--
+            level指定日志级别，从低到高的优先级：
+                ALL < TRACE < DEBUG < INFO < WARN < ERROR < FATAL < OFF
+        -->
+        <root level="DEBUG">
+            <appender-ref ref="spring6log"/>
+        </root>
+    </loggers>
+
+    <appenders>
+        <!--输出日志信息到控制台-->
+        <console name="spring6log" target="SYSTEM_OUT">
+            <!--控制日志输出的格式-->
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss SSS} [%t] %-3level %logger{1024} - %msg%n"/>
+        </console>
+    </appenders>
+
+</configuration>
+```
+
+**使用日志框架**
+
+```java
+public void testLog() {
+    Logger logger = LoggerFactory.getLogger(SpringTest.class);
+    logger.info("我是一个一个日志信息啊啊啊");
+    logger.error("我是一个一个错误信息啊啊啊");
+}
+```
+
+# 三、Spring 对 IoC 的实现
+
+## 1、控制反转 IoC
+
+控制反转是一种思想。
+
+反转：对象创建的权利交给第三方容器，对象与对象关系的维护交给第三方容器。
+
+Spring 通过依赖注入 DI 实现了控制反转。
+
+## 2、依赖注入
+
+依赖：对象与对象之间的关联关系。
+
+Spring 使用依赖注入进行 bean 管理：bean 对象的创建和 bean 对象属性的赋值(bean 对象之间关系的维护)。
+
+依赖注入实现方式：
+
+- set 注入
+- 构造方法注入
+
+### (1) set 注入
+
+基于 set 方法进行注入。
+
+**引入依赖**
+
+```xml
+<dependencies>
+    <!--Spring context 依赖-->
+    <!-- https://mvnrepository.com/artifact/org.springframework/spring-context -->
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-context</artifactId>
+        <version>6.0.0</version>
+    </dependency>
+
+    <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.13.2</version>
+        <scope>test</scope>
+    </dependency>
+    
+    
+</dependencies>
+```
+
+**`UserDao`**
+
+```java
+public class UserDao {
+    // 日志对象
+    private static final Logger logger = LoggerFactory.getLogger(UserDao.class);
+
+    public void insert() {
+        logger.info("用户数据插入成功！");
+    }
+}
+```
+
+**`UserService`**
+
+在 IDEA 中 `setUserDao()` 方法旁边有如下标识：
+
+![image-20221121164134960](img/image-20221121164134960.png) 
+
+说明 Spring 会将 `set` 方法后的标识符视为属性。
+
+```java
+public class UserService {
+    private UserDao userDao;
+
+    public void setUserDao(UserDao userDao) {
+        this.userDao = userDao;
+    }
+
+    public void insertUser() {
+        userDao.insert();
+    }
+}
+```
+
+**编写 `beans.xml` 配置文件**
+
+```xml
+<!--配置 UserDao-->
+<bean id="userDao" class="com.zzy.DI.dao.UserDao"></bean>
+
+<!--配置 UserService-->
+<bean id="userService" class="com.zzy.DI.service.UserService">
+    <property name="userDao" ref="userDao"></property>
+</bean>
+```
+
+**测试程序**
+
+```java
+public void testInsertUser() {
+    // 启用 Spring 容器
+    ApplicationContext applicationContext = new ClassPathXmlApplicationContext("beans.xml");
+    // 获取 bean 对象
+    UserService userService = applicationContext.getBean("userService", UserService.class);
+    userService.insertUser();
+}
+```
+
+### (2) 构造方法注入
+
+`MyService.java`
+
+```java
+public class MyService {
+    private UserDao userDao;
+    private VipDao vipDao;
+
+    public MyService(UserDao userDao, VipDao vipDao) {
+        this.userDao = userDao;
+        this.vipDao = vipDao;
+    }
+
+    public void insertAll() {
+        userDao.insert();
+        vipDao.insert();
+    }
+}
+```
+
+`beans.xml`
+
+```xml
+<!--配置 MyService-->
+<bean id="myService" class="com.zzy.DI.service.MyService">
+    <constructor-arg index="0" ref="userDao"/>
+    <constructor-arg index="1" ref="vipDao"/>
+</bean>
+```
+
+## 3、Set 注入专题
+
+### (1) 内部 bean 与外部 bean
+
+外部 bean：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="userDaoBean" class="com.powernode.spring6.dao.UserDao"/>
+
+    <bean id="userServiceBean" class="com.powernode.spring6.service.UserService">
+        <property name="userDao" ref="userDaoBean"/>
+    </bean>
+
+</beans>
+```
+
+内部 bean：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="userServiceBean" class="com.powernode.spring6.service.UserService">
+        <property name="userDao">
+            <bean class="com.powernode.spring6.dao.UserDao"/>
+        </property>
+    </bean>
+
+</beans>
+```
+
+> 小技巧：Ctrl + F12 查询类中的方法和属性。
+
+### (2) 简单类型注入
+
+Spring 视下面的类型为简单类型：
+
+![image-20221122090542598](img/image-20221122090542598.png)
+
+使用代码：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="userBean" class="com.powernode.spring6.beans.User">
+        <!--如果像这种int类型的属性，我们称为简单类型，这种简单类型在注入的时候要使用value属性，不能使用ref-->
+        <!--<property name="age" value="20"/>-->
+        <property name="age">
+            <value>20</value>
+        </property>
+    </bean>
+</beans>
+```
+
+并不会使用这种方法给实体类对象赋值，实体类对象的赋值会交由持久层框架进行。
+
+**经典案例**
+
+Spring 管理数据源：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+  
+    <bean id="dataSource" class="com.powernode.spring6.beans.MyDataSource">
+        <property name="driver" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="url" value="jdbc:mysql://localhost:3306/spring"/>
+        <property name="username" value="root"/>
+        <property name="password" value="123456"/>
+    </bean>
+  
+</beans>
+```
+
+配置信息也是写到了配置文件中，没有写死到程序里。
+
+### (3) 级联属性赋值（了解）
+
+`Clazz.java`
+
+```java
+package com.powernode.spring6.beans;
+
+/**
+ * @author 动力节点
+ * @version 1.0
+ * @className Clazz
+ * @since 1.0
+ **/
+public class Clazz {
+    private String name;
+
+    public Clazz() {
+    }
+
+    public Clazz(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Clazz{" +
+                "name='" + name + '\'' +
+                '}';
+    }
+}
+```
+
+`Student.java`
+
+```java
+package com.powernode.spring6.beans;
+
+/**
+ * @author 动力节点
+ * @version 1.0
+ * @className Student
+ * @since 1.0
+ **/
+public class Student {
+    private String name;
+    private Clazz clazz;
+
+    public Student() {
+    }
+
+    public Student(String name, Clazz clazz) {
+        this.name = name;
+        this.clazz = clazz;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setClazz(Clazz clazz) {
+        this.clazz = clazz;
+    }
+
+    public Clazz getClazz() {
+        return clazz;
+    }
+
+    @Override
+    public String toString() {
+        return "Student{" +
+                "name='" + name + '\'' +
+                ", clazz=" + clazz +
+                '}';
+    }
+}
+```
+
+配置文件：
+
+```java
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="clazzBean" class="com.powernode.spring6.beans.Clazz"/>
+
+    <bean id="student" class="com.powernode.spring6.beans.Student">
+        <property name="name" value="张三"/>
+
+        <!--要点1：以下两行配置的顺序不能颠倒-->
+        <property name="clazz" ref="clazzBean"/>
+        <!--要点2：clazz属性必须有getter方法-->
+        <property name="clazz.name" value="高三一班"/>
+    </bean>
+</beans>
+```
+
+### (4) 数组注入
+
+`Team.java` 中有 `Player` 数组。
+
+`Player.java`
+
+```java
+public class Player {
+    private String name;
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Player{" +
+                "name='" + name + '\'' +
+                '}';
+    }
+}
+```
+
+`Team.java`
+
+```java
+public class Team {
+    private String name;
+    private Player[] players;
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setPlayers(Player[] players) {
+        this.players = players;
+    }
+
+    @Override
+    public String toString() {
+        return "Team{" +
+                "name='" + name + '\'' +
+                ", players=" + Arrays.toString(players) +
+                '}';
+    }
+}
+```
+
+bean 对象配置文件
+
+```xml
+<!--Player 对象-->
+<bean id="playerJames" class="com.zzy.DI.bean.Player">
+    <property name="name" value="James"/>
+</bean>
+
+<bean id="playerDavis" class="com.zzy.DI.bean.Player">
+    <property name="name" value="Davis"/>
+</bean>
+
+<bean id="playerWalker" class="com.zzy.DI.bean.Player">
+    <property name="name" value="Walker"/>
+</bean>
+
+<bean id="playerWestbrook" class="com.zzy.DI.bean.Player">
+    <property name="name" value="Westbrook"/>
+</bean>
+
+<!--Team 对象-->
+<bean id="lakersBean" class="com.zzy.DI.bean.Team">
+    <property name="name" value="lakers"/>
+    <property name="players">
+        <array>
+            <ref bean="playerJames"></ref>
+            <ref bean="playerDavis"></ref>
+            <ref bean="playerWalker"></ref>
+            <ref bean="playerWestbrook"></ref>
+        </array>
+    </property>
+</bean>
+```
+
+### (5) List 注入和 Set 注入
+
+`Team.java` 更改如下：
+
+```java
+public class Team {
+    private String name;
+//    private Player[] players;
+
+    private List<Player> players;
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setPlayers(List<Player> players) {
+        this.players = players;
+    }
+
+    @Override
+    public String toString() {
+        return "Team{" +
+                "name='" + name + '\'' +
+                ", players=" + players +
+                '}';
+    }
+}
+```
+
+bean 对象管理配置文件如下：
+
+```xml
+<!--Team 对象-->
+<bean id="lakersBean" class="com.zzy.DI.bean.Team">
+    <property name="name" value="lakers"/>
+    <property name="players">
+        <list>
+            <ref bean="playerJames"></ref>
+            <ref bean="playerDavis"></ref>
+            <ref bean="playerWalker"></ref>
+            <ref bean="playerWestbrook"></ref>
+        </list>
+    </property>
+</bean>
+```
+
+Set 注入与 List 注入类似。
+
+### (6) Map 注入
+
+`Person.java`
+
+```java
+public class Person {
+    private String name;
+    private Map<String, String> phones;
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setPhones(Map<String, String> phones) {
+        this.phones = phones;
+    }
+
+    @Override
+    public String toString() {
+        return "Person{" +
+                "name='" + name + '\'' +
+                ", phones=" + phones +
+                '}';
+    }
+}
+```
+
+bean 管理配置文件：
+
+```xml
+<bean id="jackBean" class="com.zzy.DI.bean.Person">
+    <property name="name" value="Jack"/>
+    <property name="phones">
+        <map>
+            <entry key="工作号码" value="13566666666"/>
+            <entry key="生活号码" value="15000000000"/>
+            <entry key="情人号码" value="18622222222"/>
+        </map>
+    </property>
+</bean>
+```
+
+注入 property：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="peopleBean" class="com.powernode.spring6.beans.People">
+        <property name="properties">
+            <props>
+                <prop key="driver">com.mysql.cj.jdbc.Driver</prop>
+                <prop key="url">jdbc:mysql://localhost:3306/spring</prop>
+                <prop key="username">root</prop>
+                <prop key="password">123456</prop>
+            </props>
+        </property>
+    </bean>
+</beans>
+```
+
+### (7) null 和空字符串的注入
+
+注入 null：
+
+不给属性赋值，或
+
+```xml
+<bean id="vipBean" class="com.powernode.spring6.beans.Vip">
+    <property name="email">
+        <null/>
+    </property>
+</bean>
+```
+
+### (8) 注入特殊符号
+
+解决方案一：使用转义字符代替
+
+| **特殊字符** | **转义字符** |
+| ------------ | ------------ |
+| >            | `&gt;`       |
+| <            | `&lt;`       |
+| '            | `&apos;`     |
+| "            | `&quot;`     |
+| &            | `&amp;`      |
+
+解决方案二：
+
+```xml
+<bean id="mathBean" class="com.powernode.spring6.beans.Math">
+	<property name="result">
+		<!--只能使用value标签-->
+		<value><![CDATA[2 < 3]]></value>
+	</property>
+</bean>
+```
+
+## 4、p 命名空间注入
+
+基于 set 方法，简化 set 注入。
+
+在 xml 文件头部信息中添加 p 命名空间的配置信息：
+
+```
+xmlns:p="http://www.springframework.org/schema/p"
+```
+
+如下所示：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="dogBean" class="com.zzy.DI.bean.Dog" p:age="10" p:name="赛赛" p:birth-ref="nowTimeBean"/>
+
+    <bean id="nowTimeBean" class="java.util.Date"/>
+
+</beans>
+```
+
+## 5、c 命名空间注入
+
+基于构造方法，简化构造方法注入。
+
+配置文件：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!--<bean id="myTimeBean" class="com.powernode.spring6.beans.MyTime" c:year="1970" c:month="1" c:day="1"/>-->
+
+    <bean id="myTimeBean" class="com.powernode.spring6.beans.MyTime" c:_0="2008" c:_1="8" c:_2="8"/>
+
+</beans>
+```
+
+## 6、util  命名空间
+
+使用命名空间使配置复用。
+
+**引入 util 命名空间**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <util:properties id="prop">
+        <prop key="driver">com.mysql.cj.jdbc.Driver</prop>
+        <prop key="url">jdbc:mysql://localhost:3306/spring</prop>
+        <prop key="username">root</prop>
+        <prop key="password">123456</prop>
+    </util:properties>
+
+    <bean id="dataSource1" class="com.powernode.spring6.beans.MyDataSource1">
+        <property name="properties" ref="prop"/>
+    </bean>
+
+    <bean id="dataSource2" class="com.powernode.spring6.beans.MyDataSource2">
+        <property name="properties" ref="prop"/>
+    </bean>
+</beans>
+```
+
+## 7、基于 XML 的自动装配
+
+### (1) 根据名字
+
+`UserDao.java`
+
+```java
+public class UserDao {
+    // 日志对象
+    private static final Logger logger = LoggerFactory.getLogger(UserDao.class);
+
+    public void insert() {
+        logger.info("用户数据插入成功！");
+    }
+}
+```
+
+`UserService.java`
+
+```java
+public class UserService {
+    private UserDao userDao;
+
+    public void setUserDao(UserDao userDao) {
+        this.userDao = userDao;
+    }
+
+    public void insertUser() {
+        userDao.insert();
+    }
+}
+```
+
+配置文件：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="userDao" class="com.zzy.DI.dao.UserDao"/>
+    <bean id="userService" class="com.zzy.DI.service.UserService" autowire="byName"/>
+</beans>
+```
+
+使用属性名和 beanId 进行匹配，然后注入。
+
+### (2) 根据类型
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+<!--    <bean id="userDao" class="com.zzy.DI.dao.UserDao"/>-->
+<!--    <bean id="userService" class="com.zzy.DI.service.UserService" autowire="byName"/>-->
+
+    <bean id="userDao" class="com.zzy.DI.dao.UserDao"/>
+    <bean id="userService" class="com.zzy.DI.service.UserService" autowire="byType"/>
+</beans>
+```
+
+使用属性的类型进行匹配。
+
+## 8、Spring 引入外部属性配置文件
+
+配置文件中使用 Context 命名空间：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+    <!--引入配置文件-->
+    <context:property-placeholder location="jdbc.properties"/>
+
+    <!--属性注入-->
+    <bean id="ds3" class="com.zzy.DI.jdbc.MyDataSource3">
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+</beans>
+```
+
+> 注：Spring 引入配置文件时 username 会优先使用 window 环境中的值。
+
+jdbc 配置按如下方式进行书写：
+
+```properties
+jdbc.driver=com.mysql.cj.jdbc.Driver
+jdbc.url=jdbc:mysql://localhost:3306/bjpowernode
+jdbc.username=root
+jdbc.password=991118
+```
+
+# 四、Bean 的作用域
+
+## 1、单例与多例
+
+默认情况下，Spring 管理 bean 使用单例模式。单例(singleton)。
+
+在初始化 Spring 容器时，创建 bean 对象。
+
+即：
+
+```xml
+<bean id="dogBean" class="com.zzy.scope.bean.Dog" scope="singleton">
+    <property name="name" value="赛赛"/>
+    <property name="age" value="14"/>
+</bean>
+```
+
+将 `scope` 改为 `prototype`，初始化 Spring 容器时不会创建对象，在 `getBean()` 方法调用时创建一个新的 bean 对象。
+
+在 web 应用中，`scope` 的值更多。
+
+还可以自定义 `Scope`，案例：线程 Scope。
+
+- 第一步：自定义Scope。（实现Scope接口）
+
+- - spring内置了线程范围的类：org.springframework.context.support.SimpleThreadScope，可以直接用。
+
+- 第二步：将自定义的Scope注册到Spring容器中。
+
+```xml
+<bean class="org.springframework.beans.factory.config.CustomScopeConfigurer">
+  <property name="scopes">
+    <map>
+      <entry key="myThread">
+        <bean class="org.springframework.context.support.SimpleThreadScope"/>
+      </entry>
+    </map>
+  </property>
+</bean>
+```
+
+- 第三步：使用Scope。
+
+```xml
+<bean id="sb" class="com.powernode.spring6.beans.SpringBean" scope="myThread" />
+```
+
+# 五、GoF 之工厂模式
+
+设计模式：可以重复使用的解决方案。
+
+- GoF 23 种设计模式可分为三大类：
+
+  - **创建型**（5个）：解决对象创建问题。
+
+    - 单例模式
+
+    - 工厂方法模式
+
+    - 抽象工厂模式
+
+    - 建造者模式
+
+    - 原型模式
+
+  - **结构型**（7个）：一些类或对象组合在一起的经典结构。
+
+    - 代理模式
+
+    - 装饰模式
+
+    - 适配器模式
+
+    - 组合模式
+
+    - 享元模式
+
+    - 外观模式
+
+    - 桥接模式
+
+  - **行为型**（11个）：解决类或对象之间的交互问题。
+
+    - 策略模式
+
+    - 模板方法模式
+
+    - 责任链模式
+
+    - 观察者模式
+
+    - 迭代子模式
+
+    - 命令模式
+
+    - 备忘录模式
+
+    - 状态模式
+
+    - 访问者模式
+
+    - 中介者模式
+
+    - 解释器模式
+
+## 1、工厂模式三种形态
+
+工厂模式通常有三种形态：
+
+- 第一种：**简单工厂模式（Simple Factory）：不属于23种设计模式之一。简单工厂模式又叫做：静态 工厂方法模式。简单工厂模式是工厂方法模式的一种特殊实现。**
+- 第二种：工厂方法模式（Factory Method）：是23种设计模式之一。
+- 第三种：抽象工厂模式（Abstract Factory）：是23种设计模式之一。
+
+## 2、简单工厂模式
+
+解决的问题：客户端不需要关心创建对象的细节，需要对象只需要向工厂索要，初步实现了责任的分离。
+
+客户端只负责 “消费”，供给端只负责 “生产供给”。
+
+简单工厂模式中的角色：
+
+- 抽象产品
+- 具体产品
+- 工厂
+
+抽象产品：
+
+```java
+package com.powernode.factory;
+
+/**
+ * 武器（抽象产品角色）
+ * @author 动力节点
+ * @version 1.0
+ * @className Weapon
+ * @since 1.0
+ **/
+public abstract class Weapon {
+    /**
+     * 所有的武器都有攻击行为
+     */
+    public abstract void attack();
+}
+```
+
+具体产品：
+
+```java
+package com.powernode.factory;
+
+/**
+ * 坦克（具体产品角色）
+ * @author 动力节点
+ * @version 1.0
+ * @className Tank
+ * @since 1.0
+ **/
+public class Tank extends Weapon{
+    @Override
+    public void attack() {
+        System.out.println("坦克开炮！");
+    }
+}
+```
+
+工厂类：
+
+```java
+package com.powernode.factory;
+
+/**
+ * 工厂类角色
+ * @author 动力节点
+ * @version 1.0
+ * @className WeaponFactory
+ * @since 1.0
+ **/
+public class WeaponFactory {
+    /**
+     * 根据不同的武器类型生产武器
+     * @param weaponType 武器类型
+     * @return 武器对象
+     */
+    public static Weapon get(String weaponType){
+        if (weaponType == null || weaponType.trim().length() == 0) {
+            return null;
+        }
+        Weapon weapon = null;
+        if ("TANK".equals(weaponType)) {
+            weapon = new Tank();
+        } else if ("FIGHTER".equals(weaponType)) {
+            weapon = new Fighter();
+        } else if ("DAGGER".equals(weaponType)) {
+            weapon = new Dagger();
+        } else {
+            throw new RuntimeException("不支持该武器！");
+        }
+        return weapon;
+    }
+}
+```
+
+简单工厂模式缺点：
+
+- 添加具体产品时需要修改代码，违背 OCP 原则
+- 工厂类出问题，整个系统瘫痪
+
+## 3、工厂方法模式
+
+工厂方法模式中的角色：
+
+- 抽象产品
+- 具体产品
+- 抽象工厂
+- 具体工厂
+
+一个具体产品对应一个具体工厂。
+
+抽象工厂：
+
+```java
+package com.powernode.factory;
+
+/**
+ * 武器工厂接口(抽象工厂角色)
+ * @author 动力节点
+ * @version 1.0
+ * @className WeaponFactory
+ * @since 1.0
+ **/
+public interface WeaponFactory {
+    Weapon get();
+}
+```
+
+具体工厂：
+
+```java
+package com.powernode.factory;
+
+/**
+ * 具体工厂角色
+ * @author 动力节点
+ * @version 1.0
+ * @className GunFactory
+ * @since 1.0
+ **/
+public class GunFactory implements WeaponFactory{
+    @Override
+    public Weapon get() {
+        return new Gun();
+    }
+}
+```
+
+需要扩展时，只需要加入具体产品类和具体工厂类，不需要修改原来的代码。
+
+工厂方法模式缺点：
+
+- 系统扩展时添加非常多的类
+- 增加系统具体类的依赖
+
+# 六、Bean 的获取方法
+
+四种方式：
+
+- 构造方法实例化
+- 通过简单工厂模式实例化
+
+## 1、简单工厂模式实例化
+
+告知 Spring 静态工厂以及创建实例的方法。
+
+**`StarFactory.java`**
+
+```java
+public class StarFactory {
+    /**
+     * 获取明星实例
+     * @return
+     */
+    public static Star getStar() {
+        return new Star();
+    }
+}
+```
+
+**配置文件**
+
+在配置文件中告知 Spring 工厂的全限定名称和获取实例的方法。
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="star" class="com.zzy.instantiation.bean.StarFactory" factory-method="getStar"/>
+</beans>
+```
+
+在这种方式中，无需创建工厂对象。
+
+## 2、工厂方法模式实例化
+
+工厂方法模式中，一个具体工厂对应一个具体产品，工厂创建产品使用实例方法，因此不仅要让 Spring  管理具体产品的实例化，还要让 Spring 管理工厂的实例化。
+
+**具体工厂**
+
+```java
+public class GunFactory {
+    public Gun getGun() {
+        return new Gun();
+    }
+}
+```
+
+**配置文件**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="gunFactory" class="com.zzy.instantiation.bean.GunFactory"/>
+    <!--告知 Spring 使用哪个工厂的哪个实例方法创建实例-->
+    <bean id="gunBean" factory-bean="gunFactory" factory-method="getGun"/>
+</beans>
+```
+
+## 3、抽象工厂接口方法实例化
+
+让具体工厂实现 Spring 中的 `FactoryBean` 接口，将其注册为 bean 工厂，便不用再在配置文件中配置。
+
+**`PersonFactory.java`**
+
+```java
+public class PersonFactory implements FactoryBean<Person> {
+    @Override
+    public Person getObject() throws Exception {
+        return new Person();
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        return Person.class;
+    }
+}
+```
+
+配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="person" class="com.zzy.instantiation.bean.PersonFactory"/>
+</beans>
+```
+
+通过 `FactoryBean.java` 创建实例可以对实例进行加工。
+
+## 4、`BeanFactory` 和 `FactoryBean` 的区别
+
+`BeanFactory` 是 IoC 容器顶级对象。
+
+`FactoryBean` 是一个工厂 `bean`，其作用是辅助创建其他 bean。
+
+## 5、`FactoryBean` 实战：引用方式注入 Date
+
+通过实现 `FactoryBean` 的 `DateFactory` 创建指定日期的 `Date` 对象。
+
+**`DateFactory.java`**
+
+```java
+public class DateFactory implements FactoryBean<Date> {
+    private String dateStr;
+
+    public DateFactory() {
+    }
+
+    public DateFactory(String dateStr) {
+        this.dateStr = dateStr;
+    }
+
+    @Override
+    public Date getObject() throws Exception {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = simpleDateFormat.parse(dateStr);
+        return date;
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        return null;
+    }
+}
+```
+
+**配置文件**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="dateBean" class="com.zzy.instantiation.bean.DateFactory">
+        <constructor-arg name="dateStr" value="2022-11-25"/>
+    </bean>
+
+    <bean id="person" class="com.zzy.instantiation.bean.Person">
+        <property name="birth" ref="dateBean"/>
+    </bean>
+</beans>
+```
 
