@@ -33,6 +33,28 @@
 </dependency>
 ```
 
+## JDK 扩展包依赖(使用 @Resource)
+
+Spring 6：
+
+```xml
+<dependency>
+  <groupId>jakarta.annotation</groupId>
+  <artifactId>jakarta.annotation-api</artifactId>
+  <version>2.1.1</version>
+</dependency>
+```
+
+Spring 5：
+
+```xml
+<dependency>
+  <groupId>javax.annotation</groupId>
+  <artifactId>javax.annotation-api</artifactId>
+  <version>1.3.2</version>
+</dependency>
+```
+
 # 一、框架概述
 
 - 开源轻量级 JavaEE 框架。
@@ -1261,6 +1283,8 @@ public class GunFactory implements WeaponFactory{
 
 - 构造方法实例化
 - 通过简单工厂模式实例化
+- 工厂方法模式实例化
+- 实现 `FactoryBean` 接口实例化
 
 ## 1、简单工厂模式实例化
 
@@ -1356,7 +1380,7 @@ public class PersonFactory implements FactoryBean<Person> {
 </beans>
 ```
 
-通过 `FactoryBean.java` 创建实例可以对实例进行加工。
+使用 `FactoryBean.java` 可以在创建实例之前对实例进行加工。
 
 ## 4、`BeanFactory` 和 `FactoryBean` 的区别
 
@@ -1412,3 +1436,336 @@ public class DateFactory implements FactoryBean<Date> {
 </beans>
 ```
 
+# 七、Bean 的生命周期
+
+Spring 允许在 Bean 的生命周期的各个点位添加代码。
+
+## 1、粗略五步
+
+- 实例化 Bean
+- 给 Bean 属性赋值
+- 调用 Bean 的 init() 方法 [自己写、自己配、方法名随意]
+- 使用 Bean
+- 销毁 Bean[自己写、自己配、方法名随意]
+
+## 2、进阶七步
+
+![image.png](img/1665393936765-0ea5dcdd-859a-4ac5-9407-f06022c498b9.png)
+
+使用案例：
+
+**实现 `BeanPostProcessor`**
+
+```java
+package com.powernode.spring6.bean;
+
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+
+/**
+ * @author 动力节点
+ * @version 1.0
+ * @className LogBeanPostProcessor
+ * @since 1.0
+ **/
+public class LogBeanPostProcessor implements BeanPostProcessor {
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println("Bean后处理器的before方法执行，即将开始初始化");
+        return bean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        System.out.println("Bean后处理器的after方法执行，已完成初始化");
+        return bean;
+    }
+}
+```
+
+**在配置文件中配置 `BeanPostProcessor`**
+
+```xml
+<!--配置Bean后处理器。这个后处理器将作用于当前配置文件中所有的bean。-->
+<bean class="com.powernode.spring6.bean.LogBeanPostProcessor"/>
+```
+
+## 3、终极十步
+
+![image.png](img/1665394697870-15de433a-8d50-4b31-9b75-b2ca7090c1c6.png)
+
+## 4、小细节
+
+Spring 根据Bean的作用域来选择管理方式。
+
+- 对于singleton作用域的Bean，Spring 能够精确地知道该Bean何时被创建，何时初始化完成，以及何时被销毁；
+- 而对于 prototype 作用域的 Bean，Spring 只负责创建，当容器创建了 Bean 的实例后，Bean 的实例就交给客户端代码管理，Spring 容器将不再跟踪其生命周期。
+
+## 5、自己 new 的对象纳入 Spring 管理
+
+实例代码：
+
+```java
+public void testRegister() {
+    Gun gun = new Gun();
+    System.out.println(gun);
+
+    DefaultListableBeanFactory defaultListableBeanFactory = new DefaultListableBeanFactory();
+    defaultListableBeanFactory.registerSingleton("gunBean", gun);
+    Gun gunBean = defaultListableBeanFactory.getBean("gunBean", Gun.class);
+    System.out.println(gunBean);
+}
+```
+
+# 八、Bean 的循环依赖
+
+我中有你类型的属性，你中有我类型的属性。
+
+## 1、singleton + setter
+
+可以解决循环依赖本质：
+
+这种模式下，Bean 实例的创建和属性的赋值分为两个阶段进行，Bean 实例一旦创建完成，便进行**曝光**，在后续属性赋值时两个实例都能得到实例的引用。
+
+![image.png](img/1665452274046-82594b87-2974-4e08-a6ab-2218d001d14f.png)
+
+**配置文件**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="husband" class="com.zzy.circular.bean.Husband">
+        <property name="name" value="张三"/>
+        <property name="wife" ref="wife"/>
+    </bean>
+
+    <bean id="wife" class="com.zzy.circular.bean.Wife">
+        <property name="name" value="李四"/>
+        <property name="husband" ref="husband"/>
+    </bean>
+</beans>
+```
+
+> 延伸：两个 bean 的 `scope` 只要有一个是 `singleton` 便可以解决循环依赖。
+
+## 2、Spring 解决循环依赖的机理
+
+在 `DefaultSingletonBeanRegistry.java` 中有三个重要属性：
+
+**Cache of singleton objects: bean name to bean instance.\** 单例对象的缓存：key存储bean名称，value存储Bean对象【一级缓存】
+
+**Cache of early singleton objects: bean name to bean instance.**早期单例对象的缓存：key存储bean名称，value存储早期的Bean对象【二级缓存】
+
+**Cache of singleton factories: bean name to ObjectFactory.\** **单例工厂缓存：key存储bean名称，value存储该Bean对应的ObjectFactory对象【三级缓存】**
+
+这三个缓存其实本质上是三个Map集合。
+
+# 九、Spring IoC 注解式开发
+
+## 1、注解回顾
+
+自定义注解：
+
+```java
+package com.powernode.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(value = {ElementType.TYPE})
+@Retention(value = RetentionPolicy.RUNTIME)
+public @interface Component {
+    String value();
+}
+```
+
+该注解上面修饰的注解包括：Target注解和Retention注解，这两个注解被称为元注解。
+
+Target注解用来设置Component注解可以出现的位置，以上代表表示Component注解只能用在类和接口上。
+
+Retention注解用来设置Component注解的保持性策略，以上代表Component注解可以被反射机制读取。
+
+String value(); 是Component注解中的一个属性。该属性类型String，属性名是value。
+
+## 2、声明 Bean 注解
+
+负责声明Bean的注解，常见的包括四个：
+
+- @Component：基本
+- @Controller：web 层
+- @Service：service 层
+- @Repository：dao 层
+
+### (1) 注解的使用
+
+**加入 aop 依赖**
+
+引入 `spring-context` 依赖后会自动引入。
+
+**在配置文件中加入 context 命名空间，并配置要扫描的包**
+
+扫描的包可以指定多个。
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="com.zzy.bean"/>
+</beans>
+```
+
+配置完成后左侧显示：![image-20221127085440098](img/image-20221127085440098.png)
+
+**使用注解**
+
+```java
+//@Component("studentBean")
+// 默认情况下，beanId 为类名首字母变小写
+@Component
+public class Student {
+}
+```
+
+## 3、选择性实例化
+
+在配置文件中：
+
+```xml
+<context:component-scan base-package="com.powernode.spring6.bean3">
+  <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+  <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+  <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+</context:component-scan>
+```
+
+## 4、属性注入注解
+
+### (1) 使用 @value 注入简单类型
+
+`Dog.java`
+
+```java
+public class Dog {
+    @Value("赛赛")
+    private String name;
+    @Value("15")
+    private Integer age;
+```
+
+`@Value` 注解也可以放到构造方法或 setter 方法前。
+
+### (2) 使用 @Autowired 和 @Qualifier 进行引用自动注入
+
+可以给接口类型的属性赋实现类的引用。
+
+`OrderDao.java`
+
+```java
+public interface OrderDao {
+    void insert();
+}
+```
+
+`OrderDao.java` 有两个实现类：
+
+将他们都纳入 Spring 容器进行管理。
+
+`OrderDaoOracle.java`
+
+```java
+@Repository
+public class OrderDaoOracle implements OrderDao {
+
+    @Override
+    public void insert() {
+        System.out.println("Oracle 数据库正在保存信息...");
+    }
+}
+```
+
+`OrderDaoMySQL.java`
+
+```java
+@Repository
+public class OrderDaoMySQL implements OrderDao {
+    @Override
+    public void insert() {
+        System.out.println("MySQL 数据库正在保存数据...");
+    }
+}
+```
+
+`OrderService.java` 中有 `OrderDao` 类型的属性：
+
+如果 `OrderDao` 只有一个实现类，只使用 `@Autowired` 注解即可；如果有多个实现类，还需要 `@Qualifier` 注解指定实现类的 beanId。
+
+```java
+@Service
+public class OrderService {
+    @Autowired
+    @Qualifier("orderDaoOracle")
+    private OrderDao orderDao;
+
+    public void generateOrder() {
+        orderDao.insert();
+    }
+}
+```
+
+### (3) @Resource[官方建议]
+
+Resource 注解属于 JDK 的一部分。
+
+- **@Resource注解默认根据名称装配byName，未指定name时，使用属性名作为name。通过name找不到的话会自动启动通过类型byType装配。**
+- **@Autowired注解默认根据类型装配byType，如果想根据名称装配，需要配合@Qualifier注解一起用。**
+
+@Resource注解属于JDK扩展包，所以不在JDK当中，需要额外引入以下依赖：【**如果是JDK8的话不需要额外引入依赖。高于JDK11或低于JDK8需要引入以下依赖。**】
+
+Spring 6 版本依赖：
+
+```xml
+<dependency>
+  <groupId>jakarta.annotation</groupId>
+  <artifactId>jakarta.annotation-api</artifactId>
+  <version>2.1.1</version>
+</dependency>
+```
+
+Spring 5 版本依赖：
+
+```xml
+<dependency>
+  <groupId>javax.annotation</groupId>
+  <artifactId>javax.annotation-api</artifactId>
+  <version>1.3.2</version>
+</dependency>
+```
+
+@Resource 注解的使用方式：
+
+```java
+@Resource(name = "orderDaoOracle")
+private OrderDao orderDao;
+```
+
+## 5、全注解式开发
+
+使用配置类代替配置文件。
+
+```java
+@Configuration
+@ComponentScan({"com.zzy.dao", "com.zzy.service"})
+public class SpringConfig {
+}
+```
