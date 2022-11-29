@@ -55,6 +55,17 @@ Spring 5：
 </dependency>
 ```
 
+# Spring-aspects 依赖
+
+```xml
+<!--Spring-aspects 依赖-->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-aspects</artifactId>
+    <version>6.0.0</version>
+</dependency>
+```
+
 # 一、框架概述
 
 - 开源轻量级 JavaEE 框架。
@@ -1769,3 +1780,380 @@ private OrderDao orderDao;
 public class SpringConfig {
 }
 ```
+
+# 十、GoF 代理模式
+
+## 1、代理模式理解
+
+为什么要使用代理模式？（替身与演员）
+
+- 需要保护目标类
+- 目标类需要增强
+
+代理模式中的角色：
+
+- 目标类
+- 代理类
+- 目标类和代理类的公共接口
+
+![image.png](img/1665651817094-af9ecbad-24ae-4c11-9fa2-efe46653df25.png)
+
+代理模式代码实现上有两种方式：
+
+- 静态代理
+- 动态代理
+
+## 2、静态代理
+
+代理类由我们自己写出，一个目标类对应一个代理类。
+
+使用案例：
+
+**公共接口**
+
+```java
+/**
+ * 公共接口
+ */
+public interface OrderService {
+    /**
+     * 生成订单
+     */
+    void generate();
+
+    /**
+     * 订单详情
+     */
+    void detail();
+
+    /**
+     * 删除订单
+     */
+    void delete();
+}
+```
+
+**目标类**
+
+```java
+/**
+ * 目标类
+ */
+public class OrderServiceImpl implements OrderService{
+    @Override
+    public void generate() {
+        System.out.println("订单已生成。");
+    }
+
+    @Override
+    public void detail() {
+        System.out.println("订单详情如下。");
+    }
+
+    @Override
+    public void delete() {
+        System.out.println("订单已删除。");
+    }
+}
+```
+
+**代理类**
+
+```java
+/**
+ * 代理类
+ */
+public class OrderServiceProxy implements OrderService{
+    private OrderService orderService;
+
+    @Override
+    public void generate() {
+        /*
+            增强代码
+        */
+        orderService.generate();
+    }
+
+    @Override
+    public void detail() {
+
+    }
+
+    @Override
+    public void delete() {
+
+    }
+}
+```
+
+静态代理优点：
+
+- 符合 OCP 原则
+- 代理类和目标类是关联关系，耦合度低
+
+静态代理的缺点是：类爆炸。
+
+## 3、动态代理
+
+在程序运行阶段，在内存中动态生成代理对象。
+
+在内存当中动态生成类的技术常见的包括：
+
+- JDK动态代理技术：只能代理接口。
+- CGLIB动态代理技术：CGLIB(Code Generation Library)是一个开源项目。是一个强大的，高性能，高质量的Code生成类库，它可以在运行期扩展Java类与实现Java接口。它既可以代理接口，又可以代理类，**底层是通过继承的方式实现的**。性能比JDK动态代理要好。**（底层有一个小而快的字节码处理框架ASM。）**
+- Javassist动态代理技术：Javassist是一个开源的分析、编辑和创建Java字节码的类库。是由东京工业大学的数学和计算机科学系的 Shigeru Chiba （千叶 滋）所创建的。它已加入了开放源代码JBoss 应用服务器项目，通过使用Javassist对字节码操作为JBoss实现动态"AOP"框架。
+
+### (1) JDK 动态代理
+
+使用详情见老杜笔记。
+
+### (2) CGLIB 动态代理
+
+# 十一、AOP 面向切面编程
+
+AOP（Aspect oriented programming）。
+
+Spring AOP 实现采用 JDK 动态代理 + CGLIB 动态代理。
+
+## 1、AOP 介绍
+
+一句话 AOP：将与核心业务代码无关的交叉业务代码抽取出来，形成独立组件，以横向交叉的方式应用到业务流程过程中。
+
+![image.png](img/1665732609757-d8ae52ba-915e-49cf-9ef4-c7bcada0d601.png)
+
+## 2、AOP 术语
+
+![image.png](img/1665735638342-44194599-66e2-4c02-a843-8a8b3ba5b0c8.png)
+
+连接点(Joinpoint)：业务方法之间的间隙。
+
+切点(pointcut)：将被织入增强代码的业务方法。
+
+通知(advice)：交叉业务代码。包括前置通知、后置通知、环绕通知、异常通知、最终通知。
+
+切面(aspect)：切点 + 通知。
+
+织入(weaving)：将通知加入目标对象的过程。
+
+代理对象(proxy)：织入通知后的目标对象。
+
+目标对象(target)：要织入通知的对象。
+
+## 3、切点表达式
+
+> 就是确定哪些目标方法要织入增强代码。
+
+切点表达式语法格式：
+
+```
+execution([访问控制权限修饰符] 返回值类型 [全限定类名].方法名(形式参数列表) [异常])
+```
+
+访问控制权限修饰符：
+
+- 可选项。
+- 没写，就是4个权限都包括。
+- 写public就表示只包括公开的方法。
+
+返回值类型：
+
+- 必填项。
+- \* 表示返回值类型任意。
+
+全限定类名：
+
+- 可选项。
+- 两个点“..”代表当前包以及子包下的所有类。
+- 省略时表示所有的类。
+
+方法名：
+
+- 必填项。
+- *表示所有方法。
+- set*表示所有的set方法。
+
+形式参数列表：
+
+- 必填项
+
+- () 表示没有参数的方法
+- (..) 参数类型和个数随意的方法
+- (*) 只有一个参数的方法
+- (*, String) 第一个参数类型随意，第二个参数是String的。
+
+异常：
+
+- 可选项。
+- 省略时表示任意异常类型。
+
+使用案例：
+
+service 包下所有类的以 delete 开头的所有方法，方法参数类型和个数随意，修饰符为 `public` ，返回值类型任意。
+
+```
+execution(public * com.powernode.mall.service.*.delete*(..))
+```
+
+mall 包下所有类所有方法
+
+```
+execution(* com.powernode.mall..*(..))
+```
+
+所有类的所有方法
+
+```
+execution(* *(..))
+```
+
+## 4、使用 Spring 的 AOP
+
+Spring对AOP的实现包括以下3种方式：
+
+- **第一种方式：Spring框架结合AspectJ框架实现的AOP，基于注解方式。**
+- **第二种方式：Spring框架结合AspectJ框架实现的AOP，基于XML方式。**
+- 第三种方式：Spring框架自己实现的AOP，基于XML配置方式。
+
+实际开发中，都是Spring+AspectJ来实现AOP。所以我们重点学习第一种和第二种方式。
+
+什么是AspectJ？（Eclipse组织的一个支持AOP的框架。AspectJ框架是独立于Spring框架之外的一个框架，Spring框架用了AspectJ）。
+
+**引入依赖**
+
+需要引入 spring-aop(已随 Spring-context 依赖引入) 和 spring-aspects(Spring 整合 AspectJ) 依赖。
+
+```xml
+<!--Spring-aspects 依赖-->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-aspects</artifactId>
+    <version>6.0.0</version>
+</dependency>
+```
+
+**配置文件设置**
+
+配置文件中添加 context 命名空间和 aop 命名空间。
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+    
+
+</beans>
+```
+
+**目标类与目标方法**
+
+```java
+/**
+ * 目标类
+ */
+public class OrderService {
+    /**
+     * 目标方法
+     */
+    public void generate() throws InterruptedException {
+        Thread.sleep(2345);
+        System.out.println("订单已生成！");
+    }
+}
+```
+
+**定义切面类**
+
+```java
+/**
+ * 切面类
+ */
+@Aspect
+public class TimerAspect {
+}
+```
+
+将切面类和目标类都纳入 Spring 管理。
+
+在配置文件中加入组件扫描。
+
+```xml
+<context:component-scan base-package="com.zzy.service"/>
+```
+
+在切面类中添加通知和切点。
+
+```java
+/**
+ * 切面类
+ */
+@Aspect
+@Component
+public class TimerAspect {
+    @Before("execution(public void com.zzy.service.OrderService.generate())")
+    public void countStart() {
+        System.out.println("我是一个一个前置通知啊。。。");
+    }
+}
+```
+
+在 Spring 配置文件中开始自动代理。
+
+```xml
+<aop:aspectj-autoproxy/>
+```
+
+`proxy-target-class="true"` 表示采用cglib动态代理。
+
+`proxy-target-class="false"` 表示默认采用jdk动态代理。默认值是false。
+
+## 5、各种通知
+
+```java
+@Aspect
+@Component
+public class TimerAspect {
+    @Before("execution(public void com.zzy.service.OrderService.generate())")
+    public void beforeAdvice() {
+        System.out.println("前置通知");
+    }
+
+    @AfterReturning("execution(public void com.zzy.service.OrderService.generate())")
+    public void afterAdvice() {
+        System.out.println("后置通知");
+    }
+
+    @Around("execution(public void com.zzy.service.OrderService.generate())")
+    public void aroundAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
+        System.out.println("环绕前通知");
+        joinPoint.proceed();
+        System.out.println("环绕后通知");
+    }
+
+    @AfterThrowing("execution(public void com.zzy.service.OrderService.generate())")
+    public void exceptionAdvice() {
+        System.out.println("产生异常");
+    }
+
+    @After("execution(public void com.zzy.service.OrderService.generate())")
+    public void finalAdvice() {
+        System.out.println("最终通知");
+    }
+}
+```
+
+各种通知执行顺序：
+
+```
+环绕前通知
+前置通知
+业务代码
+后置通知
+最终通知
+环绕后通知
+```
+
