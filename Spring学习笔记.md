@@ -2157,3 +2157,319 @@ public class TimerAspect {
 环绕后通知
 ```
 
+## 6、切面顺序
+
+多个切面的顺序。
+
+使用 `@Order` 注解规定顺序。
+
+```java
+@Aspect
+@Component
+public class Aspect1 {
+    @Order(1)
+    @Before("execution(public void com.zzy.service.OrderService.generate())")
+    public void beforeAdvice() {
+        System.out.println("Aspect1 前置通知");
+    }
+}
+```
+
+## 7、通用切点
+
+写一个空方法，使用 `@PointCut` 注解标注。
+
+```java
+@Aspect
+@Component
+public class Aspect1 {
+    @Pointcut("execution(public void com.zzy.service.OrderService.generate())")
+    public void generalPointCut() {
+
+    }
+
+    @Order(1)
+    @Before("generalPointCut()")
+    public void beforeAdvice() {
+        System.out.println("Aspect1 前置通知");
+    }
+}
+```
+
+## 8、连接点 JoinPoint
+
+连接点一个重要的方法：
+
+`joinPoint.getSignature()` 可以获取目标方法的签名[public void methodName(参数列表)]。
+
+```xml
+@Before("generalPointCut()")
+public void beforeAdvice(JoinPoint joinPoint) {
+    System.out.println("Aspect1 前置通知");
+    System.out.println("目标方法名：" + joinPoint.getSignature().getName());
+}
+```
+
+## 9、全注解式开发
+
+使用配置类代替配置文件。
+
+**配置类**
+
+```java
+@Configuration // 配置类
+@ComponentScan({"com.zzy.service"}) // 组件扫描
+@EnableAspectJAutoProxy() // 启动 AspectJ 自动代理
+public class SpringConfig {
+}
+```
+
+**测试代码**
+
+```java
+public void testNoXml() {
+    ApplicationContext applicationContext = new AnnotationConfigApplicationContext(SpringConfig.class);
+    OrderService orderService = applicationContext.getBean("orderService", OrderService.class);
+    orderService.generate();
+}
+```
+
+## 10、基于 XML 实现的 Spring AOP
+
+看老杜笔记。
+
+## 11、面向切面编程案例：事务处理
+
+编程式事务解决方案。
+
+模拟事务处理代码。
+
+**引入依赖**
+
+**编写配置类**
+
+```java
+@Configuration // 配置类
+@ComponentScan({"com.zzy.service"}) // 开启组件扫描
+@EnableAspectJAutoProxy // 启用 AspectJ 自动代理
+public class SpringConfig {
+}
+```
+
+**编写目标类**
+
+```java
+@Service
+public class AccountService {
+    public void transfer() {
+        int i = 10 / 0;
+        System.out.println("账户正在转账");
+    }
+}
+```
+
+**编写切面类**
+
+```java
+@Component
+@Aspect
+public class TransactionAspect {
+    // 定义通用切点
+    @Pointcut("execution(* com.zzy.service..*(..))")
+    public void generalCutPoint() {
+
+    }
+
+    @Around("generalCutPoint()")
+    public void transactionManage(ProceedingJoinPoint joinPoint) {
+        try {
+            // 开启事务
+            System.out.println("开启事务");
+            // 执行业务代码
+            joinPoint.proceed();
+            // 提交事务
+            System.out.println("提交事务");
+        } catch (Throwable e) {
+           // 事务回滚
+            System.out.println("事务回滚");
+        }
+    }
+}
+```
+
+**测试程序**
+
+```java
+public void testTransfer() {
+    ApplicationContext ac = new AnnotationConfigApplicationContext(SpringConfig.class);
+    AccountService accountService = ac.getBean("accountService", AccountService.class);
+    accountService.transfer();
+}
+```
+
+## 12、案例二：安全日志
+
+需求：记录增删改操作的时间和行为人。
+
+**引入依赖**
+
+**编写配置类**
+
+```java
+@Configuration // 配置类
+@ComponentScan({"com.zzy.service"}) // 组件扫描
+@EnableAspectJAutoProxy // 启动 AspectJ 自动代理
+public class SpringConfig {
+}
+```
+
+**编写目标类**
+
+```java
+@Service
+public class UserService {
+    public void insertUser() {
+        System.out.println("正在保存用户信息...");
+    }
+    
+    public void deleteUser() {
+        System.out.println("正在删除用户信息...");
+    }
+    
+    public void updateUser() {
+        System.out.println("正在更新用户信息...");
+    }
+    
+    public void queryUser() {
+        System.out.println("正在查询用户信息...");
+    }
+}
+```
+
+**编写切面类**
+
+```java
+@Aspect
+@Component
+public class SecurityAspect {
+    // 切点
+    @Pointcut("execution(* com.zzy.service..insert*(..))")
+    public void insertPointcut(){}
+
+    @Pointcut("execution(* com.zzy.service..delete*(..))")
+    public void deletePointcut(){}
+
+    @Pointcut("execution(* com.zzy.service..update*(..))")
+    public void updatePointcut(){}
+
+    // 通知
+    @Before("insertPointcut() || deletePointcut() || updatePointcut()")
+    public void recordAction(JoinPoint joinPoint) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String nowTime = sdf.format(new Date());
+        System.out.println(nowTime + "张三" + joinPoint.getSignature().getName());
+    }
+}
+```
+
+# 十二、Spring 对事务的支持
+
+Spring 对 AOP 方式事务控制进行了二次封装。
+
+Spring 对于事务的支持：
+
+- 编程式事务（基本不用）
+- 声明式事务
+  - 注解方式
+  - XML 方式
+
+## 1、事务管理 API
+
+![image.png](img/1666504216275-1b6a9ac4-6958-4cdf-9323-7a79a08d059d.png)
+
+![img](https://cdn.nlark.com/yuque/0/2022/png/21376908/1666504216275-1b6a9ac4-6958-4cdf-9323-7a79a08d059d.png?x-oss-process=image%2Fwatermark%2Ctype_d3F5LW1pY3JvaGVp%2Csize_16%2Ctext_5Yqo5Yqb6IqC54K5%2Ccolor_FFFFFF%2Cshadow_50%2Ct_80%2Cg_se%2Cx_10%2Cy_10)
+
+PlatformTransactionManager接口：spring事务管理器的核心接口。在**Spring6**中它有两个实现：
+
+- DataSourceTransactionManager：支持JdbcTemplate、MyBatis、Hibernate等事务管理。
+- JtaTransactionManager：支持分布式事务管理。
+
+使用方式见老杜笔记。
+
+## 2、事务属性
+
+![image.png](img/1666506552984-8a4f9d42-73ba-4ded-853d-564d27340db5.png)
+
+事务的重要属性：
+
+- 传播行为
+- 隔离级别
+- 超时时间
+- 只读事务
+- 回滚异常
+- 不回滚的异常
+
+### (1) 事务传播行为
+
+事务传播行为：方法 a 和方法 b 都使用了事务管理，如果方法 a 调用了方法 b，事务将是什么行为。
+
+事务传播行为有七个值：
+
+![image.png](img/1666505960049-06173489-15fc-4d16-94f3-1a9025f85d8c.png)
+
+- REQUIRED：支持当前事务，如果不存在就新建一个(默认)**【没有就新建，有就加入】**
+- SUPPORTS：支持当前事务，如果当前没有事务，就以非事务方式执行**【有就加入，没有就不管了】**
+- MANDATORY：必须运行在一个事务中，如果当前没有事务正在发生，将抛出一个异常**【有就加入，没有就抛异常】**
+- REQUIRES_NEW：开启一个新的事务，如果一个事务已经存在，则将这个存在的事务挂起**【不管有没有，直接开启一个新事务，开启的新事务和之前的事务不存在嵌套关系，之前事务被挂起】**
+- NOT_SUPPORTED：以非事务方式运行，如果有事务存在，挂起当前事务**【不支持事务，存在就挂起】**
+- NEVER：以非事务方式运行，如果有事务存在，抛出异常**【不支持事务，存在就抛异常】**
+- NESTED：如果当前正有一个事务在进行中，则该方法应当运行在一个嵌套式事务中。被嵌套的事务可以独立于外层事务进行提交或回滚。如果外层事务不存在，行为就像REQUIRED一样。**有事务的话，就在这个事务里再嵌套一个完全独立的事务，嵌套的事务可以独立的提交和回滚。没有事务就和REQUIRED一样。】**
+
+### (2) 事务隔离级别
+
+![image.png](img/1666508609641-2c838566-7334-4cf1-b452-0fed9aaebf3d.png)
+
+MySQL 默认 REPEATEABLE_READ。
+
+数据库中读取数据存在的三大问题：（三大读问题）
+
+- **脏读：读取到没有提交到数据库的数据，叫做脏读。**
+- **不可重复读：在同一个事务当中，第一次和第二次读取的数据不一样。**
+- **幻读：读到的数据是假的。幻读在多事务并发的情况下是无法避免的。**
+
+事务隔离级别包括四个级别：
+
+- 读未提交：READ_UNCOMMITTED
+
+- - 这种隔离级别，存在脏读问题，所谓的脏读(dirty read)表示能够读取到其它事务未提交的数据。
+
+- 读提交：READ_COMMITTED
+
+- - 解决了脏读问题，其它事务提交之后才能读到，但存在不可重复读问题。
+
+- 可重复读：REPEATABLE_READ
+
+- - 解决了不可重复读，可以达到可重复读效果，只要当前事务不结束，读取到的数据一直都是一样的。但存在幻读问题。
+
+- 序列化：SERIALIZABLE
+
+- - 解决了幻读问题，事务排队执行。不支持并发。
+
+| **隔离级别** | **脏读** | **不可重复读** | **幻读** |
+| :----------: | :------: | :------------: | :------: |
+|   读未提交   |  **有**  |     **有**     |  **有**  |
+|    读提交    |    无    |     **有**     |  **有**  |
+|   可重复读   |    无    |       无       |  **有**  |
+|    序列化    |    无    |       无       |    无    |
+
+### (3) 事务超时
+
+使用代码：
+
+```java
+@Transactional(timeout = 10)
+```
+
+所有的 DML 语句必须在 10s 内完成，否则事务会回滚。
+
+最后一条 DML 语句后的业务逻辑超时没有关系。
