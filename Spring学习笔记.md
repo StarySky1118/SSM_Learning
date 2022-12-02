@@ -2473,3 +2473,382 @@ MySQL 默认 REPEATEABLE_READ。
 所有的 DML 语句必须在 10s 内完成，否则事务会回滚。
 
 最后一条 DML 语句后的业务逻辑超时没有关系。
+
+### (4) 只读事务
+
+使用代码：
+
+```java
+@Transactional(readOnly = true)
+```
+
+设置事务为只读事务，事务中只能执行 select 语句。Spring 会启动优化策略加速查询。
+
+### (5) 出现哪些异常事务回滚、哪些异常事务不回滚
+
+如果不进行设置，出现异常即回滚事务。
+
+```java
+@Transactional(rollbackFor = RuntimeException.class)
+```
+
+表示只有发生 `RuntimeException` 异常或该异常的子类异常才回滚。
+
+```java
+@Transactional(noRollbackFor = NullPointerException.class)
+```
+
+表示发生 `NullPointerException` 或该异常的子类异常不回滚，其他异常则回滚。
+
+## 3、事务的全注解式开发
+
+配置类代码：
+
+```java
+/**
+ * @author 动力节点
+ * @version 1.0
+ * @className Spring6Config
+ * @since 1.0
+ **/
+@Configuration
+@ComponentScan("com.powernode.bank")
+@EnableTransactionManagement
+public class Spring6Config {
+
+    @Bean
+    public DataSource getDataSource(){
+        DruidDataSource dataSource = new DruidDataSource();
+        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        dataSource.setUrl("jdbc:mysql://localhost:3306/spring6");
+        dataSource.setUsername("root");
+        dataSource.setPassword("root");
+        return dataSource;
+    }
+
+    @Bean(name = "jdbcTemplate")
+    public JdbcTemplate getJdbcTemplate(DataSource dataSource){
+        JdbcTemplate jdbcTemplate = new JdbcTemplate();
+        jdbcTemplate.setDataSource(dataSource);
+        return jdbcTemplate;
+    }
+
+    @Bean
+    public DataSourceTransactionManager getDataSourceTransactionManager(DataSource dataSource){
+        DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager();
+        dataSourceTransactionManager.setDataSource(dataSource);
+        return dataSourceTransactionManager;
+    }
+
+}
+```
+
+## 4、事务 XML 开发
+
+见老杜笔记。
+
+# 十三、Spring 对 Junit 的支持
+
+## 1、Spring 对 Junit4 的支持
+
+**引入依赖**
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.springframework/spring-test -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-test</artifactId>
+    <version>6.0.0</version>
+    <scope>test</scope>
+</dependency>
+```
+
+**声明 bean**
+
+```java
+@Component
+public class User {
+    @Value("张三")
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+```
+
+**编写 Spring 配置文件**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="com.zzy.pojo"/>
+
+</beans>
+```
+
+**编写测试类**
+
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration("classpath:spring.xml") // 配置 Spring 容器上下文
+public class UserTest {
+    @Autowired
+    private User user;
+
+    @Test
+    public void testUser2() {
+        System.out.println(user.getName());
+    }
+}
+```
+
+这样类中便可以使用 Spring 容器中的 bean，不需要每次都创建 Spring 上下文。就像这样：
+
+```java
+public void testSecurity() {
+    ApplicationContext applicationContext = new AnnotationConfigApplicationContext(SpringConfig.class);
+    UserService userService = applicationContext.getBean("userService", UserService.class);
+    userService.queryUser();
+    userService.insertUser();
+    userService.deleteUser();
+    userService.updateUser();
+}
+```
+
+## 2、Spring 对 Junit5 的支持
+
+**引入依赖**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.powernode</groupId>
+    <artifactId>spring6-015-junit</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <!--仓库-->
+    <repositories>
+        <!--spring里程碑版本的仓库-->
+        <repository>
+            <id>repository.spring.milestone</id>
+            <name>Spring Milestone Repository</name>
+            <url>https://repo.spring.io/milestone</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!--spring context依赖-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>6.0.0-M2</version>
+        </dependency>
+        <!--spring对junit的支持相关依赖-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>6.0.0-M2</version>
+        </dependency>
+        <!--junit5依赖-->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.9.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
+
+</project>
+```
+
+**单元测试**
+
+```java
+package com.powernode.spring6.test;
+
+import com.powernode.spring6.bean.User;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration("classpath:spring.xml")
+public class SpringJUnit5Test {
+
+    @Autowired
+    private User user;
+
+    @Test
+    public void testUser(){
+        System.out.println(user.getName());
+    }
+}
+```
+
+# 十四、Spring 集成 Mybatis
+
+## 1、使用案例
+
+**准备数据库表**
+
+![image-20221201100030753](img/image-20221201100030753.png)
+
+**引入依赖**
+
+- - spring-context
+
+- - spring-jdbc
+  - mysql驱动
+  - mybatis
+  - mybatis-spring：**mybatis提供的与spring框架集成的依赖**
+  - 德鲁伊连接池
+  - junit
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.zzy</groupId>
+    <artifactId>Spring-013-spring-mybatis</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+
+    <dependencies>
+<!--        - spring-context-->
+<!--        - spring-jdbc-->
+<!--        - mysql驱动-->
+<!--        - mybatis-->
+<!--        - mybatis-spring：**mybatis提供的与spring框架集成的依赖**-->
+<!--        - 德鲁伊连接池-->
+<!--        - junit-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.30</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>3.5.10</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis-spring</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
+
+</project>
+```
+
+**创建基于三层架构的包**
+
+![image-20221201101042018](img/image-20221201101042018.png)
+
+**编写 pojo 类**
+
+**编写 mapper 接口和  mapper 配置文件**
+
+**编写 service 接口和实现类**
+
+**编写 jdbc.properties 和 mybatis 核心配置文件**
+
+```properties
+jdbc.driver=com.mysql.cj.jdbc.Driver
+jdbc.url=jdbc:mysql://localhost:3306/bjpowernode
+jdbc.username=root
+jdbc.password=991118
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <settings>
+        <setting name="logImpl" value="STDOUT_LOGGING"/>
+    </settings>
+</configuration>
+```
+
+其他一概放入 spring.xml 中配置。
+
+**Spring 配置文件**
+
+# 十五、最后总结/补充
+
+在 Spring 配置文件中引入子配置文件。
+
+```xml
+<!--引入其他的spring配置文件-->
+<import resource="common.xml"/>
+```
+
+Spring 八大设计模式：
+
+- 简单工厂模式
+- 工厂方法模式
+- 单例模式
+- 代理模式
+- 装饰器模式
+- 观察者模式
+- 策略模式
+- 模板方法模式

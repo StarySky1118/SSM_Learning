@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="jackBean" class="com.zzy.DI.bean.Person">
+        <property name="name" value="Jack"/>
+        <property name="phones">
+            <map>
+                <entry key="工作号码" value="13566666666"/>
+                <entry key="生活号码" value="15000000000"/>
+                <entry key="情人号码" value="18622222222"/>
+            </map>
+        </property>
+    </bean>
+</beans>

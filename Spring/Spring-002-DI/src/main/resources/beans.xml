@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <!--配置 UserDao-->
+    <bean id="userDao" class="com.zzy.DI.dao.UserDao"></bean>
+
+    <!--配置 VipDao-->
+    <bean id="vipDao" class="com.zzy.DI.dao.VipDao"></bean>
+
+    <!--配置 UserService-->
+    <bean id="userService" class="com.zzy.DI.service.UserService">
+        <property name="userDao" ref="userDao"></property>
+    </bean>
+
+    <!--配置 MyService-->
+    <bean id="myService" class="com.zzy.DI.service.MyService">
+        <constructor-arg index="0" ref="userDao"/>
+        <constructor-arg index="1" ref="vipDao"/>
+    </bean>
+
+
+</beans>

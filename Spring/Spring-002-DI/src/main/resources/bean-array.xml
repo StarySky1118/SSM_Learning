@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <!--Player 对象-->
+    <bean id="playerJames" class="com.zzy.DI.bean.Player">
+        <property name="name" value="James"/>
+    </bean>
+
+    <bean id="playerDavis" class="com.zzy.DI.bean.Player">
+        <property name="name" value="Davis"/>
+    </bean>
+
+    <bean id="playerWalker" class="com.zzy.DI.bean.Player">
+        <property name="name" value="Walker"/>
+    </bean>
+
+    <bean id="playerWestbrook" class="com.zzy.DI.bean.Player">
+        <property name="name" value="Westbrook"/>
+    </bean>
+
+    <!--Team 对象-->
+    <bean id="lakersBean" class="com.zzy.DI.bean.Team">
+        <property name="name" value="lakers"/>
+        <property name="players">
+            <set>
+                <ref bean="playerJames"></ref>
+                <ref bean="playerDavis"></ref>
+                <ref bean="playerWalker"></ref>
+                <ref bean="playerWestbrook"></ref>
+            </set>
+        </property>
+    </bean>
+</beans>

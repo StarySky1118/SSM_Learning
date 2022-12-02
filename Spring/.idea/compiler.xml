@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="Spring-001-introduction" />
+        <module name="Spring-007-annotation2" />
+        <module name="Spring-014-spring-mybatis-test" />
+        <module name="simple-factory" />
+        <module name="Spring-013-spring-mybatis" />
+        <module name="review-aop" />
+        <module name="Spring-002-DI" />
+        <module name="Spring-012-spring-junit" />
+        <module name="dynamic-proxy" />
+        <module name="Spring-015-spring-mybatis-test2" />
+        <module name="Spring-009-aop-aspectj-anno" />
+        <module name="Spring-011-aop-simusecurity" />
+        <module name="Spring-003-Scope" />
+        <module name="Spring-004-instantiation" />
+        <module name="Spring-006-annotation" />
+        <module name="Spring-005-circular-dependency" />
+        <module name="static-proxy" />
+        <module name="Spring-010-aop-simutransaction" />
+        <module name="Spring-008-annotation3" />
+      </profile>
+    </annotationProcessing>
+  </component>
+</project>

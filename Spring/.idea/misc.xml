@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/Spring-001-introduction/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-002-DI/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-003-Scope/pom.xml" />
+        <option value="$PROJECT_DIR$/simple-factory/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-004-instantiation/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-005-circular-dependency/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-006-annotation/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-007-annotation2/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-008-annotation3/pom.xml" />
+        <option value="$PROJECT_DIR$/static-proxy/pom.xml" />
+        <option value="$PROJECT_DIR$/dynamic-proxy/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-009-aop-aspectj-anno/pom.xml" />
+        <option value="$PROJECT_DIR$/review-aop/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-010-aop-simutransaction/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-011-aop-simusecurity/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-012-spring-junit/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-013-spring-mybatis/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-014-spring-mybatis-test/pom.xml" />
+        <option value="$PROJECT_DIR$/Spring-015-spring-mybatis-test2/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" project-jdk-name="17" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+</project>

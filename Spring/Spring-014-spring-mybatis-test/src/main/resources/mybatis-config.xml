@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <mappers>
+        <!--        <mapper resource="com/bjpowernode/dao/StudentDao.xml"/>-->
+        <!-- 将dao包下的所有mapper文件全部扫描 -->
+        <package name="com.zzy.smt.mapper"/>
+    </mappers>
+</configuration>
