@@ -2202,7 +2202,7 @@ public class Aspect1 {
 
 `joinPoint.getSignature()` 可以获取目标方法的签名[public void methodName(参数列表)]。
 
-```xml
+```java
 @Before("generalPointCut()")
 public void beforeAdvice(JoinPoint joinPoint) {
     System.out.println("Aspect1 前置通知");
